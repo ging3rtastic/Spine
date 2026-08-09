@@ -62,10 +62,14 @@ function saveLibrary() {
 }
 
 // ---------- Google Books lookup ----------
+// Free key from console.cloud.google.com (Books API enabled). Restrict it to your
+// GitHub Pages URL under "HTTP referrers" in the Cloud Console for safety.
+const GOOGLE_BOOKS_API_KEY = "AIzaSyCyZgyc4qQZBFRfpTW4TaOTy9iTiNtqH5g";
+
 async function lookupBooks(query) {
   const isIsbn = /^[0-9]{9,13}$/.test(query.replace(/-/g, ""));
   const q = isIsbn ? `isbn:${query.replace(/-/g, "")}` : query;
-  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10`);
+  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10&key=${GOOGLE_BOOKS_API_KEY}`);
   if (!res.ok) throw new Error("network");
   const data = await res.json();
   if (!data.items) return [];
