@@ -2,6 +2,15 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (15)
+
+- Fixed a likely cross-browser bug in the new bookshelf view: long titles could spill out below the spine
+  box on some mobile browsers (reported as "tiles with the image and name below" — `text-overflow: ellipsis`
+  combined with `writing-mode: vertical-rl` is unreliable across engines). Titles are now truncated in JS
+  (`truncate(book.title, 26)`) instead of relying on CSS ellipsis, and `.spine` got `overflow: hidden` as a
+  hard backstop regardless of the title-clipping mechanism. Verified with an intentionally long title in
+  Playwright before shipping.
+
 ## 2026-08-20 (14)
 
 - Replaced the flat shelf-row list on To Read / Reading / Read with an actual bookshelf: books render as

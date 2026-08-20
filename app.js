@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "6";
+const APP_VERSION = "7";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -385,9 +385,12 @@ function renderSpine(book) {
   const color = spineColor(book.title || book.id);
   const width = spineWidth(book.pageCount);
   const label = `${book.title} by ${book.authors || "Unknown author"}`;
+  // Truncated in JS, not left to CSS ellipsis: text-overflow + writing-mode: vertical-rl is
+  // unreliable across mobile browsers and can let long titles spill out past the spine's height.
+  const title = truncate(book.title, 26);
   return `
     <button class="spine" style="background:${color};width:${width}px" data-detail="${esc(book.id)}" data-detail-source="library" aria-label="${esc(label)}">
-      <span class="spine-title">${esc(book.title)}</span>
+      <span class="spine-title">${esc(title)}</span>
       <span class="spine-foil"></span>
     </button>`;
 }
