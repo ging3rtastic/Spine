@@ -79,10 +79,15 @@ iteration. See decisions.md.
 
 ## Version tag
 
-`app.js` defines `APP_VERSION` (rendered as a small `v{N}` badge in the top-right corner via `.version-tag`
-in `index.html`). Because the shell is network-first now, this number is **purely a manual, optional label**
-for eyeballing "did a deploy happen" — it does not need to be bumped on every commit, and nothing depends on
-it for correctness.
+`app.js` defines `APP_VERSION` (rendered as a small `v{N}` badge, a flex item at the end of the fixed
+`.tabbar` row via `.version-tag` in `index.html`). Because the shell is network-first now, this number is
+**purely a manual, optional label** for eyeballing "did a deploy happen" — it does not need to be bumped on
+every commit, and nothing depends on it for correctness.
+
+It originally lived as a `position: absolute` overlay near the top of `#app`, anchored with
+`env(safe-area-inset-top)`. That combination triggered a mobile-browser quirk where the page misjudged its
+own rendered height and started scrolling, crowding the bottom tab bar. Moved it into the tab bar itself
+(already a proven-safe fixed row) to sidestep the issue rather than debug the exact cause.
 
 The version tag is a tappable badge (styled like the app's `.pill` elements): tapping it calls
 `forceRefresh()`, which unregisters the service worker, deletes Cache Storage, re-registers `sw.js` with

@@ -2,6 +2,13 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (8)
+
+- Moved the version badge from a top overlay (`position: absolute`, anchored via
+  `env(safe-area-inset-top)`) into the fixed tab bar as a normal flex item — the top overlay was causing a
+  mobile-browser scroll quirk that crowded the bottom tab bar. Reset `APP_VERSION` to `1` now that it's
+  purely cosmetic (no longer tied to cache correctness).
+
 ## 2026-08-20 (7)
 
 - Switched `sw.js` from cache-first (required manual `CACHE_NAME`/`APP_VERSION` bumps every shell change) to
