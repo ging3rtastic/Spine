@@ -2,6 +2,12 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (5)
+
+- Bumped `CACHE_NAME` to `spine-shell-v4` and `APP_VERSION` to `4` — the badge commit (3582cf7) changed
+  `app.js`/`index.html` but forgot to bump `sw.js`, so installed apps stayed stuck on the pre-badge shell.
+  This is the second time this exact mistake happened; see the reminder added to CLAUDE.md.
+
 ## 2026-08-20 (4)
 
 - Turned the version tag into a tappable pill badge (single tap, no long-press/confirm) and confirmed +

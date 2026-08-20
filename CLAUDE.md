@@ -14,6 +14,19 @@ then track it on one of three shelves (To Read / Reading / Read). All data is st
 then skim `docs/backlog.md` and `docs/decisions.md` before making changes. Update `docs/changelog.md`,
 `docs/backlog.md`, and (if a non-obvious call was made) `docs/decisions.md` when you finish a change.
 
+## IMPORTANT: every edit to app.js, index.html, or manifest.json requires a version bump
+
+This app is installed as a PWA on a phone. Its service worker only re-fetches the shell (`app.js`,
+`index.html`, `manifest.json`, icons) when `sw.js`'s own bytes change — otherwise installed devices keep
+serving the stale cached shell indefinitely, even after you push. So **any commit that touches those files
+must also**, in the same commit:
+
+1. Bump `CACHE_NAME` in `sw.js` (e.g. `spine-shell-v4` → `spine-shell-v5`).
+2. Bump `APP_VERSION` in `app.js` to match, so the on-screen version badge visibly confirms the update
+   landed.
+
+This has already been forgotten twice — check it before every commit that touches the shell.
+
 ## Commands
 
 There is no build step, package manager, or test suite. To develop:
