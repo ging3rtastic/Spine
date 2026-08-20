@@ -2,6 +2,16 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (14)
+
+- Replaced the flat shelf-row list on To Read / Reading / Read with an actual bookshelf: books render as
+  colored, variable-width spines (`renderSpine()`, width from page count, color from the existing
+  `spineColor()` palette) that wrap into shelf rows, each sitting on a wood-toned ledge drawn with a single
+  repeating CSS gradient. Vertical Fraunces-italic titles, a gold foil accent line, and a subtle press lift
+  (respects `prefers-reduced-motion`) round it out. Tapping a spine opens the same detail view as before.
+  Search results are unchanged — the shelf metaphor only applies to books already in the library. Removed
+  the now-dead `renderRow()`/`.row-*` list code. Bumped `APP_VERSION` to `6`.
+
 ## 2026-08-20 (13)
 
 - Added a book detail view: tapping a book in search results or a shelf opens a full-screen overlay with

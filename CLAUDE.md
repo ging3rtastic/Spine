@@ -33,9 +33,8 @@ manual escape hatch if something ever looks stale, but it generally shouldn't be
 Settings panel (gear icon in the header) has two independent features — see `docs/architecture.md` for
 full detail:
 - **Export/Import**: always works, no setup, merges by book id (never deletes on import).
-- **Firebase sync**: opt-in, linked by a manually-entered sync code (no login). Requires a real Firebase
-  project's config to be filled into `FIREBASE_CONFIG` in `app.js` (currently placeholder values — see
-  `docs/backlog.md`) before it'll actually work.
+- **Firebase sync**: opt-in, linked by a manually-entered sync code (no login). `FIREBASE_CONFIG` in
+  `app.js` points at a real project (`spine-aec50`) and sync has been confirmed working end-to-end.
 
 ## Commands
 
@@ -54,7 +53,7 @@ There is no build step, package manager, or test suite. To develop:
 - `app.js` — the entire application: state, rendering, and event wiring, structured as a simple
   hand-rolled render loop rather than a framework:
   - A single global `state` object holds the active tab, the in-memory `library` array, search results, and
-    UI flags (searching/scanning/open row).
+    UI flags (searching/scanning/detail overlay).
   - `render()` re-generates the full `#app` innerHTML from `state` on every change, then `attachEvents()`
     re-binds DOM listeners (via `data-*` attributes) since the DOM is fully replaced each render — there is
     no diffing.
@@ -68,8 +67,11 @@ There is no build step, package manager, or test suite. To develop:
     ISBN when unsupported.
   - Export/Import and Firebase sync live in the Settings overlay (`renderSettings()`) — see "Sync & backup"
     above and `docs/architecture.md` for the full design.
-  - Tapping a book (search result or shelf row) opens a full-screen detail view (`renderDetail()`) with the
-    untruncated description and extra Google Books metadata (publisher, categories, rating, etc.) — see
+  - The three shelf tabs render books as an actual bookshelf (`renderSpine()`) — colored, variable-width
+    spines wrapping into rows on a CSS-drawn wood ledge — not a flat list. See `docs/architecture.md` →
+    "Bookshelf view".
+  - Tapping a book (search result or shelf spine) opens a full-screen detail view (`renderDetail()`) with
+    the untruncated description and extra Google Books metadata (publisher, categories, rating, etc.) — see
     `docs/architecture.md` → "Book detail view".
 - `sw.js` — service worker implementing a network-first strategy for the app shell files listed in
   `SHELL_FILES` (network first, cache as offline fallback only — see "PWA update model" above) and network

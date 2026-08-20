@@ -122,10 +122,44 @@ unlike the browser's "Clear Website Data" setting, which wipes everything for th
 the library too. Given network-first, this is now a belt-and-suspenders manual reset rather than the primary
 update mechanism.
 
+## Bookshelf view
+
+The three shelf tabs (To Read / Reading / Read) render books as an actual bookshelf rather than a flat list:
+`renderSpine(book)` (in `app.js`) outputs a fixed-height, variable-width `<button class="spine">` — color
+from the existing `spineColor()` hash function (unchanged, still a 7-tone jewel palette), width from
+`spineWidth(pageCount)` (linear clamp, ~28px for a thin/unknown book up to ~52px for an 800+ page one). These
+sit in a `flex-wrap` container (`.shelf-case` in `index.html`) with no JS row-chunking — the browser wraps
+spines into new rows on its own once a row's width fills up.
+
+The wood ledge under every row is **one** `repeating-linear-gradient` on `.shelf-case`'s background, not a
+per-row element: since every spine shares the same fixed height (158px) and the container uses a matching
+row-gap (16px), the gradient's 174px repeat cycle (spine height, then a 2px highlight lip + 12px wood board
+within the gap) lines up under every wrapped row automatically. `.shelf-case` needs `padding-bottom: 16px` —
+without it, the container's natural height stops right after the last row's spines, cutting off before the
+ledge portion of that final cycle has room to render.
+
+Spine titles use `writing-mode: vertical-rl` + `rotate(180deg)` for bottom-to-top text (matching how English
+book spines are actually printed), Fraunces italic (the app's existing display face), truncated with
+ellipsis if too tall for the spine. Author is deliberately omitted from the spine itself — real spines lead
+with title, and author is one tap away in the detail view — keeping the spine uncluttered. A thin
+low-opacity gold `.spine-foil` line near the base echoes gold-stamped hardcover titling; it's the one
+decorative flourish beyond the core structure.
+
+Tapping a spine reuses `data-detail`/`data-detail-source="library"` exactly as the old row markup did, so
+`attachEvents()`'s existing detail-opening listener needed no changes. A small `translateY(-4px)` press lift
+(mimics pulling a book partway out) is suppressed under `prefers-reduced-motion`.
+
+This replaced the flat `.row-btn` list (`renderRow()`, now removed) entirely — not a toggle-able alternate
+view — per an explicit decision that the bookshelf should be the one signature visual move rather than a
+second layout to maintain. Search results on the Add tab were deliberately left as flat cards: that view's
+job is comparing/picking from search hits, not browsing books you already own, so the shelf metaphor doesn't
+apply there. See decisions.md.
+
 ## Book detail view
 
-Tapping a book — the cover/title area of a search result card (`.card-open` in `renderResultCard`) or an
-entire shelf row (`.row-btn` in `renderRow`) — opens a full-screen detail overlay (`renderDetail()`, reuses
+Tapping a book — the cover/title area of a search result card (`.card-open` in `renderResultCard`) or a
+spine on a shelf (`.spine` in `renderSpine`, see "Bookshelf view" below) — opens a full-screen detail overlay
+(`renderDetail()`, reuses
 the `.scanner-overlay` pattern) with the untruncated description plus whatever extra metadata Google Books
 returned (publisher, published date, page count, categories, language, rating, a "View on Google Books"
 link). This replaced the old shelf-row behavior of expanding an inline `.row-detail` panel in place (which

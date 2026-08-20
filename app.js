@@ -1,12 +1,11 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "5";
+const APP_VERSION = "6";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
   search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
   camera: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`,
   x: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
-  chevron: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`,
   trash: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>`,
   bookmark: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`,
   book: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
@@ -374,26 +373,23 @@ function renderResultCard(r) {
     </div>`;
 }
 
-function renderRow(book) {
-  const spine = spineColor(book.title || book.id);
-  const thumb = book.thumbnail
-    ? `<img class="row-thumb" src="${esc(book.thumbnail)}" alt="" />`
-    : `<div class="row-thumb-fallback">${ICON.book}</div>`;
+// Spine width scales with page count (thin books read as thin spines, thick books as thick ones),
+// clamped to a sensible range with a mid-range default when pageCount is unknown.
+function spineWidth(pageCount) {
+  if (!pageCount) return 34;
+  const w = 28 + (pageCount - 150) * (24 / 650);
+  return Math.round(Math.max(28, Math.min(52, w)));
+}
 
+function renderSpine(book) {
+  const color = spineColor(book.title || book.id);
+  const width = spineWidth(book.pageCount);
+  const label = `${book.title} by ${book.authors || "Unknown author"}`;
   return `
-    <div class="card">
-      <button class="row-btn" data-detail="${esc(book.id)}" data-detail-source="library">
-        <div class="spine-bar" style="background:${spine}"></div>
-        <div class="row-main">
-          ${thumb}
-          <div style="min-width:0;flex:1;">
-            <div class="row-title">${esc(book.title)}</div>
-            <div class="row-author">${esc(book.authors || "Unknown author")}</div>
-          </div>
-          <div class="chevron">${ICON.chevron}</div>
-        </div>
-      </button>
-    </div>`;
+    <button class="spine" style="background:${color};width:${width}px" data-detail="${esc(book.id)}" data-detail-source="library" aria-label="${esc(label)}">
+      <span class="spine-title">${esc(book.title)}</span>
+      <span class="spine-foil"></span>
+    </button>`;
 }
 
 function renderEmpty(icon, text) {
@@ -450,7 +446,9 @@ function renderShelfTab() {
     read: "Your finished shelf is empty. Books you finish will land here.",
   }[state.tab];
 
-  const body = s.length === 0 ? renderEmpty(meta.icon, emptyText) : s.map(renderRow).join("");
+  const body = s.length === 0
+    ? renderEmpty(meta.icon, emptyText)
+    : `<div class="shelf-case">${s.map(renderSpine).join("")}</div>`;
 
   return `
     ${renderHeader(meta.label, `${s.length} book${s.length === 1 ? "" : "s"}`)}

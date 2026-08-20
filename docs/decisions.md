@@ -2,6 +2,19 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Bookshelf view replaces the shelf list, doesn't toggle with it
+
+The three shelf tabs render books as spines on a shelf instead of a flat row list. Considered adding a
+list/shelf toggle to keep both, but decided against it — asked the user directly, and a full replacement was
+preferred. A toggle would mean two layouts to maintain and would dilute the one thing the redesign was
+supposed to commit to. The bookshelf leans on things the app already had (the `spineColor()` hash palette,
+the app's own name) rather than introducing a new visual language, and the existing detail view (shipped
+just before this) absorbs everything the old list's inline expand used to show, so nothing was lost by
+removing the list — just relocated one tap away.
+
+Search results deliberately kept the old flat-card layout: the bookshelf metaphor only makes sense for books
+you already own a copy of, not a list you're comparing before deciding what to add.
+
 ## Cross-device sync via Firebase + sync code, not a real account system
 
 Revises "localStorage only, no backend" below: added an *optional* Firestore-backed sync layer once real
