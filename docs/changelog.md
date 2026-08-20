@@ -2,6 +2,14 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (7)
+
+- Switched `sw.js` from cache-first (required manual `CACHE_NAME`/`APP_VERSION` bumps every shell change) to
+  network-first (always tries network, falls back to cache offline). Shell updates now reach the installed
+  app automatically on the next load — no more bumping required. `APP_VERSION` is now purely an optional
+  cosmetic label; `CACHE_NAME` is a fixed string (`"spine-shell"`). Also fixed `forceRefresh()` to
+  cache-bust the reload navigation itself, not just `sw.js` and Cache Storage. See decisions.md.
+
 ## 2026-08-20 (6)
 
 - Badge's `forceRefresh()` and the boot-time registration now both pass `updateViaCache: "none"` to

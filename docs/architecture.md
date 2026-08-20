@@ -8,7 +8,7 @@ Deeper reference than CLAUDE.md. Read CLAUDE.md first for the overview.
 |---|---|
 | `index.html` | HTML shell + all CSS (custom properties for theme colors under `:root`). Single `<div id="app">` mount point. Loads `app.js` as a plain `<script>` — no bundler, no modules. |
 | `app.js` | The entire app: state, rendering, event wiring, Google Books lookup, barcode scanning. |
-| `sw.js` | Service worker: cache-first for app-shell files, network passthrough for everything else (API calls, fonts). |
+| `sw.js` | Service worker: network-first for app-shell files (offline fallback only), network passthrough for everything else (API calls, fonts). |
 | `manifest.json` | PWA manifest — icons, theme colors, standalone display mode. |
 | `icons/` | Directory containing `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`, referenced by the manifest, HTML head, and service worker's `SHELL_FILES`. |
 
@@ -64,25 +64,31 @@ delegation — listeners are re-attached on every render.
 
 ## PWA / offline behavior
 
-`sw.js` caches the app-shell files listed in `SHELL_FILES` on `install`, cache-first. On `activate` it
-deletes any cache whose name doesn't match the current `CACHE_NAME` — so **`CACHE_NAME` must be bumped
-whenever `SHELL_FILES` contents change**, otherwise users keep getting stale shell files. Non-shell requests
-(Google Books API, Google Fonts) always go to the network.
+`sw.js` is **network-first** for the app-shell files in `SHELL_FILES`: on every request it tries `fetch(...,
+{ cache: "no-store" })` first (bypassing the browser's HTTP cache too), stashes a copy of a successful
+response in Cache Storage, and only falls back to that cached copy if the network fetch fails (offline).
+Practical effect: **while online, the app is always current on the next load — no version bump or
+`CACHE_NAME` change needed for correctness.** `CACHE_NAME` (`"spine-shell"`) is a fixed string, not a
+counter; on `activate` any cache whose name doesn't match it gets deleted, which only matters if you
+deliberately rename it later. Non-shell requests (Google Books API, Google Fonts) always go straight to the
+network, uncached, same as before.
+
+This replaced an earlier cache-first strategy that required manually bumping `CACHE_NAME` on every shell
+change — that approach was dropped because it was easy to forget (happened twice) and doesn't fit rapid
+iteration. See decisions.md.
 
 ## Version tag
 
-`app.js` defines `APP_VERSION` (rendered as a small `v{N}` tag in the top-right corner via `.version-tag` in
-`index.html`) purely so an update can be visually confirmed on a device without inspecting devtools. There
-is no shared module system between `app.js` and `sw.js`, so **`APP_VERSION` and `sw.js`'s `CACHE_NAME` must
-be bumped together by hand** whenever the shell changes — nothing enforces they stay in sync.
+`app.js` defines `APP_VERSION` (rendered as a small `v{N}` badge in the top-right corner via `.version-tag`
+in `index.html`). Because the shell is network-first now, this number is **purely a manual, optional label**
+for eyeballing "did a deploy happen" — it does not need to be bumped on every commit, and nothing depends on
+it for correctness.
 
 The version tag is a tappable badge (styled like the app's `.pill` elements): tapping it calls
 `forceRefresh()`, which unregisters the service worker, deletes Cache Storage, re-registers `sw.js` with
-`updateViaCache: "none"` (so the browser can't serve a stale HTTP-cached copy of the script itself), then
-reloads — a manual escape hatch for mobile browsers where the normal service-worker update check can lag by
-a load or two. This is **safe for the book library**: it only touches Cache Storage and the SW registration,
-never `localStorage` (where `spine.library` lives) — unlike the browser's "Clear Website Data" setting,
-which wipes everything for the origin and would delete the library too.
-
-The boot-time registration (bottom of `app.js`) also passes `updateViaCache: "none"`, so ordinary automatic
-update checks (not just badge taps) never trust a cached `sw.js`.
+`updateViaCache: "none"`, then navigates to a cache-busted URL (`?_=<timestamp>`) so neither the worker
+script nor the reload's own HTTP requests can be served stale. This is **safe for the book library**: it
+only touches Cache Storage and the SW registration, never `localStorage` (where `spine.library` lives) —
+unlike the browser's "Clear Website Data" setting, which wipes everything for the origin and would delete
+the library too. Given network-first, this is now a belt-and-suspenders manual reset rather than the primary
+update mechanism.

@@ -14,18 +14,18 @@ then track it on one of three shelves (To Read / Reading / Read). All data is st
 then skim `docs/backlog.md` and `docs/decisions.md` before making changes. Update `docs/changelog.md`,
 `docs/backlog.md`, and (if a non-obvious call was made) `docs/decisions.md` when you finish a change.
 
-## IMPORTANT: every edit to app.js, index.html, or manifest.json requires a version bump
+## PWA update model
 
-This app is installed as a PWA on a phone. Its service worker only re-fetches the shell (`app.js`,
-`index.html`, `manifest.json`, icons) when `sw.js`'s own bytes change — otherwise installed devices keep
-serving the stale cached shell indefinitely, even after you push. So **any commit that touches those files
-must also**, in the same commit:
+This app is installed as a PWA on a phone. `sw.js` uses a **network-first** strategy for the shell
+(`app.js`, `index.html`, `manifest.json`, icons): it always tries the network first and only falls back to
+the cache when offline. This means **shell changes reach the installed app automatically on the next load —
+no version bump or cache-name change is required for correctness.** `CACHE_NAME` in `sw.js` is a fixed
+string now, not a counter; only change it if you deliberately want to force-evict old cache entries.
 
-1. Bump `CACHE_NAME` in `sw.js` (e.g. `spine-shell-v4` → `spine-shell-v5`).
-2. Bump `APP_VERSION` in `app.js` to match, so the on-screen version badge visibly confirms the update
-   landed.
-
-This has already been forgotten twice — check it before every commit that touches the shell.
+`APP_VERSION` in `app.js` (the on-screen badge, top-right) is purely a manual, optional label for visually
+confirming a deploy — bump it only when you want the number to change, not on every commit. Tapping the
+badge calls `forceRefresh()`, which does a full unregister + cache wipe + cache-busted reload; use it as a
+manual escape hatch if something ever looks stale, but it generally shouldn't be needed given network-first.
 
 ## Commands
 
@@ -56,9 +56,9 @@ There is no build step, package manager, or test suite. To develop:
   - Barcode scanning (`startScanner`/`stopScanner`) uses `navigator.mediaDevices.getUserMedia` plus the
     browser `BarcodeDetector` API where available, falling back to a message telling the user to type the
     ISBN when unsupported.
-- `sw.js` — service worker implementing a cache-first strategy for the app shell files listed in
-  `SHELL_FILES` (bump `CACHE_NAME` when shell files change, so old caches are evicted on `activate`) and
-  network passthrough for everything else (Google Books API calls, fonts).
+- `sw.js` — service worker implementing a network-first strategy for the app shell files listed in
+  `SHELL_FILES` (network first, cache as offline fallback only — see "PWA update model" above) and network
+  passthrough for everything else (Google Books API calls, fonts).
 - `manifest.json` — PWA manifest (icons, theme colors, standalone display) referenced from `index.html`.
 
 Because there's no build step, changes to colors, fields, or behavior are made by editing `app.js` and

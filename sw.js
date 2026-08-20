@@ -1,4 +1,4 @@
-const CACHE_NAME = "spine-shell-v5";
+const CACHE_NAME = "spine-shell";
 const SHELL_FILES = [
   "./",
   "./index.html",
@@ -24,14 +24,21 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
-// Cache-first for the app shell, network for everything else (Google Books API, fonts, etc.)
+// Network-first for the app shell: always try to fetch the latest copy while online (and stash
+// it in the cache for offline use), only falling back to the cache when the network fails. This
+// means shell updates reach the app automatically on the next load — no CACHE_NAME bump needed.
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   const isShellFile = url.origin === self.location.origin;
+  if (!isShellFile) return;
 
-  if (isShellFile) {
-    event.respondWith(
-      caches.match(event.request).then(cached => cached || fetch(event.request))
-    );
-  }
+  event.respondWith(
+    fetch(event.request, { cache: "no-store" })
+      .then(res => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        return res;
+      })
+      .catch(() => caches.match(event.request))
+  );
 });

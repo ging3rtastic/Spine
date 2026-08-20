@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "5";
+const APP_VERSION = "6";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -358,9 +358,10 @@ function attachEvents() {
 }
 
 // Tapping the version badge unregisters the service worker, wipes its caches (Cache Storage
-// only — never touches localStorage, so the book library is untouched), then re-registers with
-// HTTP caching disabled so sw.js itself can't be served stale, before reloading. A manual escape
-// hatch since the SW's own update check can lag on mobile browsers.
+// only — never touches localStorage, so the book library is untouched), re-registers with HTTP
+// caching disabled so sw.js itself can't be served stale, then navigates to a cache-busted URL so
+// the reload's own HTTP request for index.html/app.js can't be served from browser disk cache
+// either. A manual escape hatch for whenever you want to guarantee you're on the latest deploy.
 async function forceRefresh() {
   const tag = document.querySelector(".version-tag");
   if (tag) tag.textContent = "Updating…";
@@ -377,7 +378,7 @@ async function forceRefresh() {
       await navigator.serviceWorker.register("sw.js", { updateViaCache: "none" });
     }
   } finally {
-    location.reload();
+    location.replace(location.pathname + "?_=" + Date.now());
   }
 }
 

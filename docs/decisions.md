@@ -2,6 +2,17 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Service worker: network-first, not cache-first
+
+`sw.js` originally cached the app shell cache-first and required manually bumping `CACHE_NAME` (and the
+`APP_VERSION` badge) on every commit that touched the shell, so the service worker's own byte-diff check
+would notice and re-cache. This was forgotten twice in a row and installed devices kept serving stale
+builds. Switched to network-first (always try network, fall back to the cached copy only when offline) —
+now shell updates reach the app automatically on the next load, with zero manual bookkeeping. Trade-off: an
+extra network round-trip per shell file on every load instead of serving straight from cache; accepted since
+the shell is tiny (a few KB) and offline use still works via the fallback. `APP_VERSION` is now purely an
+optional manual label, no longer required for correctness.
+
 ## No framework, no build step
 
 The whole app is one `index.html` + one `app.js`, using a hand-rolled `state` + `render()` loop with full
