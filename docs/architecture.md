@@ -139,11 +139,21 @@ without it, the container's natural height stops right after the last row's spin
 ledge portion of that final cycle has room to render.
 
 Spine titles use `writing-mode: vertical-rl` + `rotate(180deg)` for bottom-to-top text (matching how English
-book spines are actually printed), Fraunces italic (the app's existing display face), truncated with
-ellipsis if too tall for the spine. Author is deliberately omitted from the spine itself — real spines lead
-with title, and author is one tap away in the detail view — keeping the spine uncluttered. A thin
-low-opacity gold `.spine-foil` line near the base echoes gold-stamped hardcover titling; it's the one
-decorative flourish beyond the core structure.
+book spines are actually printed), Fraunces italic (the app's existing display face). The title is truncated
+in **JS** (`truncate(book.title, 26)`), not left to CSS ellipsis — `text-overflow: ellipsis` combined with
+`writing-mode: vertical-rl` is unreliable across mobile browsers, and was letting long titles spill out past
+the spine's fixed height on at least one real device (reported as "tiles with the image and name below").
+`.spine` also has `overflow: hidden` as a hard backstop regardless of the title-clipping mechanism. Author is
+deliberately omitted from the spine itself — real spines lead with title, and author is one tap away in the
+detail view — keeping the spine uncluttered.
+
+When a book has a `thumbnail`, a small `.spine-cover` image crest renders at the top of the spine (46px
+tall, `object-fit: cover`), echoing the small cover-art elements real spines often carry — added after
+initial feedback that a color-only spine felt like it was missing the book's cover entirely. Deliberately
+*not* a full-spine background image: covering the whole spine in photo art would fight the vertical title
+text for legibility and stop it reading as a spine. Books without a `thumbnail` render exactly as before —
+solid color, full-height title, no gap where the crest would have been. A thin low-opacity gold
+`.spine-foil` line near the base (always present, thumbnail or not) echoes gold-stamped hardcover titling.
 
 Tapping a spine reuses `data-detail`/`data-detail-source="library"` exactly as the old row markup did, so
 `attachEvents()`'s existing detail-opening listener needed no changes. A small `translateY(-4px)` press lift

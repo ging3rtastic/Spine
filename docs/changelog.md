@@ -2,6 +2,13 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (16)
+
+- Added a small cover-art "crest" (`.spine-cover`, 46px) to the top of spines that have a `thumbnail`,
+  after feedback that the color-only spine was missing the book's cover. Spines without a thumbnail are
+  unchanged (solid color, full-height title). Verified with mock cover images in Playwright across
+  with-cover and without-cover spines before shipping. Bumped `APP_VERSION` to `8`.
+
 ## 2026-08-20 (15)
 
 - Fixed a likely cross-browser bug in the new bookshelf view: long titles could spill out below the spine

@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "7";
+const APP_VERSION = "8";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -388,8 +388,12 @@ function renderSpine(book) {
   // Truncated in JS, not left to CSS ellipsis: text-overflow + writing-mode: vertical-rl is
   // unreliable across mobile browsers and can let long titles spill out past the spine's height.
   const title = truncate(book.title, 26);
+  // A small cover-art crest at the top, like many real spines have, rather than covering the
+  // whole spine with a busy photo — keeps it reading as a spine, not a shrunk cover thumbnail.
+  const cover = book.thumbnail ? `<img class="spine-cover" src="${esc(book.thumbnail)}" alt="" />` : "";
   return `
     <button class="spine" style="background:${color};width:${width}px" data-detail="${esc(book.id)}" data-detail-source="library" aria-label="${esc(label)}">
+      ${cover}
       <span class="spine-title">${esc(title)}</span>
       <span class="spine-foil"></span>
     </button>`;
