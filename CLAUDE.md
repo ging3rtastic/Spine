@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 Spine is a personal book tracker: a static, no-build, client-only Progressive Web App. Search or scan a book,
-then track it on one of three shelves (To Read / Reading / Read). All data is stored in the browser via
-`localStorage` — there is no backend, no account system, and no server-side code.
+then track it on one of three shelves (To Read / Reading / Read). Data lives in `localStorage` by default,
+with an optional Firebase-backed sync layer (see "Sync & backup" below) — there's still no traditional
+backend, account system, or server-side code of our own.
 
 ## Project memory
 
@@ -26,6 +27,15 @@ string now, not a counter; only change it if you deliberately want to force-evic
 confirming a deploy — bump it only when you want the number to change, not on every commit. Tapping the
 badge calls `forceRefresh()`, which does a full unregister + cache wipe + cache-busted reload; use it as a
 manual escape hatch if something ever looks stale, but it generally shouldn't be needed given network-first.
+
+## Sync & backup
+
+Settings panel (gear icon in the header) has two independent features — see `docs/architecture.md` for
+full detail:
+- **Export/Import**: always works, no setup, merges by book id (never deletes on import).
+- **Firebase sync**: opt-in, linked by a manually-entered sync code (no login). Requires a real Firebase
+  project's config to be filled into `FIREBASE_CONFIG` in `app.js` (currently placeholder values — see
+  `docs/backlog.md`) before it'll actually work.
 
 ## Commands
 
@@ -56,6 +66,8 @@ There is no build step, package manager, or test suite. To develop:
   - Barcode scanning (`startScanner`/`stopScanner`) uses `navigator.mediaDevices.getUserMedia` plus the
     browser `BarcodeDetector` API where available, falling back to a message telling the user to type the
     ISBN when unsupported.
+  - Export/Import and Firebase sync live in the Settings overlay (`renderSettings()`) — see "Sync & backup"
+    above and `docs/architecture.md` for the full design.
 - `sw.js` — service worker implementing a network-first strategy for the app shell files listed in
   `SHELL_FILES` (network first, cache as offline fallback only — see "PWA update model" above) and network
   passthrough for everything else (Google Books API calls, fonts).

@@ -5,11 +5,10 @@ sessions. Remove items once done (they'll be recorded in changelog.md instead).
 
 ## Known issues
 
-_(none open right now)_
+- **Firebase sync isn't live yet.** `FIREBASE_CONFIG` in `app.js` still has `"REPLACE_ME"` placeholders.
+  Sync will fail with "Sync error" until a real Firebase project is created and its config + security rules
+  are applied — see `docs/architecture.md` → "Cross-device sync" for the exact setup steps.
 
 ## Ideas (from README.md "Notes" section, not yet built)
 
 - Notes field per book.
-- Export/import of library data (JSON download/upload), since data is device-local only.
-- Small synced backend, if cross-device sync is ever wanted (explicitly out of scope for now — see
-  decisions.md).

@@ -2,6 +2,14 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (10)
+
+- Added a Settings panel (new gear icon in the header) with two features: **Export/Import** (JSON file
+  backup, merge-by-id on import, works immediately with no setup) and **Firebase Firestore sync** (opt-in,
+  linked by a sync code, lazy-loads Firebase only when used). `mergeBooks()` backs both so neither can lose
+  books. Firebase sync is scaffolded but not yet live — `FIREBASE_CONFIG` in `app.js` needs real values from
+  a Firebase project before it works; see `docs/backlog.md`. Bumped `APP_VERSION` to `3`.
+
 ## 2026-08-20 (9)
 
 - Fixed the real cause of the bottom-tab-bar-requires-scrolling bug on real mobile devices: `100dvh` alone

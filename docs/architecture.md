@@ -29,8 +29,10 @@ A "book" object, as stored in `state.library` / `localStorage`:
 }
 ```
 
-Persisted as JSON under the `localStorage` key `spine.library`. This is the *only* persistence layer — no
-backend, no sync. `loadLibrary()` / `saveLibrary()` in `app.js` are the sole read/write points.
+Persisted as JSON under the `localStorage` key `spine.library`. `localStorage` remains the source of truth
+for instant boot-time reads; Firestore (see "Cross-device sync" below) is an optional layer on top, only
+active once a sync code is set. `loadLibrary()` / `saveLibrary()` in `app.js` are the sole read/write points
+for local storage — `saveLibrary()` also triggers a debounced cloud push when sync is on.
 
 ## Render flow
 
@@ -61,6 +63,8 @@ delegation — listeners are re-attached on every render.
 - **BarcodeDetector API** — browser-native barcode detection (Chrome/Edge on Android, recent Safari). Feature
   detected in `startScanner()`; falls back to a "type it instead" message when unavailable.
 - **Google Fonts** — Fraunces (headings) and Inter (body), loaded via `<link>` in `index.html`.
+- **Firebase Firestore (compat SDK)** — lazy-loaded from `gstatic.com` only when sync is used; see
+  "Cross-device sync" below.
 
 ## PWA / offline behavior
 
@@ -94,7 +98,7 @@ corner of `#app` via `.version-tag` in `index.html`). Because the shell is netwo
 every commit, and nothing depends on it for correctness.
 
 It was briefly moved into the bottom tab bar on a hunch that the top overlay was the cause of a
-mobile-scroll bug (see "Viewport height fix" below); that turned out to be unrelated, so it's back at the
+mobile-scroll bug (see "Viewport height fix" above); that turned out to be unrelated, so it's back at the
 top per preference.
 
 The version tag is a tappable badge (styled like the app's `.pill` elements): tapping it calls
@@ -105,3 +109,68 @@ only touches Cache Storage and the SW registration, never `localStorage` (where 
 unlike the browser's "Clear Website Data" setting, which wipes everything for the origin and would delete
 the library too. Given network-first, this is now a belt-and-suspenders manual reset rather than the primary
 update mechanism.
+
+## Backup (Export / Import)
+
+Settings panel (gear icon in the header, `renderSettings()` in `app.js`, reuses the `.scanner-overlay`
+visual pattern) → Backup section:
+
+- **Export** builds `JSON.stringify(state.library)`, wraps it in a `Blob`, and triggers a download via a
+  temporary `<a download>` — no dependencies, works offline.
+- **Import** reads a JSON file with `FileReader`, validates it's an array of book-shaped objects, then
+  merges it into `state.library` via `mergeBooks()` rather than replacing — importing can never silently
+  delete a book that isn't in the file being imported.
+
+`mergeBooks(existing, incoming)` (in `app.js`) merges by `id`; `incoming` wins on a field conflict, but
+every id already in `existing` is always kept. This same function backs both Import and the first-time sync
+link below, so "restore a backup" and "link a second device" share one non-destructive code path.
+
+## Cross-device sync (Firebase Firestore)
+
+Optional, opt-in layer on top of `localStorage`, using Firestore's free Spark tier. Linked by a short
+**sync code** rather than a full account/login system — no signup flow, at the cost of anyone who has the
+exact code being able to read/write that library (accepted trade-off for a personal, low-sensitivity book
+list; see decisions.md).
+
+**Setup required before this works** (can't be automated — needs a Google account):
+1. Create a free project at console.firebase.google.com (Spark plan, no card).
+2. Firestore Database → create in Native mode.
+3. Authentication → Sign-in method → enable **Anonymous**.
+4. Project settings → add a Web App → copy the config object into `FIREBASE_CONFIG` in `app.js` (currently
+   `"REPLACE_ME"` placeholders — see backlog.md).
+5. Firestore → Rules →
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /libraries/{syncCode} {
+         allow read, write: if request.auth != null;
+       }
+     }
+   }
+   ```
+   Requires the silent anonymous sign-in but does not restrict *which* code an authenticated client can
+   touch — security instead comes from codes being long and random (see `generateSyncCode()`, ~10 chars
+   from a 32-symbol alphabet with ambiguous characters removed).
+
+**How it works** (`app.js`):
+- `state.syncCode`, persisted in `localStorage` (`spine.syncCode`). Unset = sync off, byte-identical to
+  pre-sync behavior — nothing Firebase-related runs.
+- Firebase's compat SDK is lazy-loaded via `loadScript()`/`loadFirebase()` (plain `<script>` tags injected
+  at runtime, not `type="module"`) only the first time sync is actually used — an already-linked device on
+  boot, or a user tapping "Start syncing"/"Link". Keeps sync entirely opt-in cost, and avoids converting
+  `app.js` to an ES module.
+- `enableSync(code)` fetches `libraries/{code}` from Firestore, merges it into the local library with
+  `mergeBooks()` (so linking can never drop existing local books), pushes the merged result back up, then
+  calls `subscribeToCloud()`. It's written to be safe to re-run on every boot for an already-linked device
+  (idempotent reconcile), which is exactly what happens — see the bottom of `app.js`.
+- `subscribeToCloud()` uses Firestore's `onSnapshot` to apply remote changes live while the app is open,
+  merging (not replacing) into local state, with a `JSON.stringify` equality check to avoid redundant
+  re-renders/saves when a snapshot event is just an echo of this device's own write.
+- `pushToCloud()`, called from `saveLibrary()`, debounces writes ~800ms so rapid taps don't spam Firestore.
+- Conflict resolution is **last-write-wins on the whole array** (no per-field/per-book merge across
+  devices) — acceptable at this app's scale (one person, a couple of devices); the merge-by-id logic only
+  protects against *losing* books, not against a genuinely concurrent edit to the same book on two devices
+  at once.
+- `sw.js` needs no changes for this — Firebase's `gstatic.com` requests are cross-origin, already covered
+  by the existing network-passthrough branch in the fetch handler.

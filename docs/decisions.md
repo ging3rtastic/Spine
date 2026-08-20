@@ -2,6 +2,25 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Cross-device sync via Firebase + sync code, not a real account system
+
+Revises "localStorage only, no backend" below: added an *optional* Firestore-backed sync layer once real
+data loss became a real worry. Chose a short random **sync code** (Firestore doc id under `libraries/`)
+that you enter on each device you want linked, instead of email/password or OAuth — a full account system
+would be more secure but is a lot more weight (UI, password resets, session handling) for a single-user app.
+
+Trade-off accepted: Firestore security rules require anonymous auth but don't check *who* is asking for a
+given code — anyone with the exact code can read/write that library. Mitigated by codes being long and
+random by default (`generateSyncCode()`, ~10 chars, 32-symbol alphabet), making guessing impractical, but
+this is genuinely weaker than per-user auth. Acceptable given the data (a personal book list) is
+low-sensitivity. `mergeBooks()` (id-based, union, never drops existing entries) is used for both this and
+Import specifically so that linking a second device — or restoring a backup — can never lose books, which
+was the whole point of adding this.
+
+Conflict resolution is last-write-wins on the whole array, not per-field. A CRDT-style or per-book merge
+would handle true concurrent edits better, but is overkill for one person syncing between a couple of
+devices.
+
 ## Service worker: network-first, not cache-first
 
 `sw.js` originally cached the app shell cache-first and required manually bumping `CACHE_NAME` (and the
@@ -21,11 +40,12 @@ deployed by uploading raw files to GitHub Pages — no npm, no bundler, no CI. T
 to re-bind listeners on every render since there's no diffing; acceptable at this app's scale (a few dozen
 DOM nodes at most).
 
-## localStorage only, no backend
+## localStorage only, no backend (superseded, see above)
 
-Data lives entirely in the browser (`localStorage` key `spine.library`). Chosen for zero cost and zero
-account/auth complexity. Trade-off: no cross-device sync — explicitly accepted, documented in README.md.
-Revisit only if sync becomes a real want (see backlog.md).
+Data originally lived entirely in the browser (`localStorage` key `spine.library`), chosen for zero cost and
+zero account/auth complexity, with no cross-device sync as an explicitly accepted trade-off. Revisited once
+sync became a real want — see "Cross-device sync via Firebase + sync code" above. `localStorage` is still
+the source of truth for instant reads; Firestore is an optional layer on top, not a replacement.
 
 ## Google Books API called directly from the client
 

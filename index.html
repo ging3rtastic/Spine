@@ -57,8 +57,10 @@
   }
   .version-tag:active { opacity: 0.7; }
   .header { padding: 22px 20px 14px; }
+  .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
   .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 600; font-size: 30px; margin: 0; letter-spacing: 0.2px; }
   .header p { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; }
+  .icon-btn.settings-btn { padding: 8px; flex-shrink: 0; }
 
   .search-row { padding: 0 20px 16px; }
   .search-box { display: flex; gap: 8px; }
@@ -79,6 +81,11 @@
     padding: 11px 0; color: #14201C; font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit;
   }
   .primary-btn:active { opacity: 0.85; }
+  .secondary-btn {
+    margin-top: 10px; width: 100%; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 10px;
+    padding: 11px 0; color: var(--text); font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  .secondary-btn:active { opacity: 0.85; }
 
   .list { padding: 0 20px; }
   .empty { display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -157,6 +164,21 @@
   .scanner-msg { text-align: center; color: var(--text-muted); max-width: 280px; }
   .scanner-msg p { font-size: 13.5px; line-height: 1.6; }
   .scanner-hint { text-align: center; color: var(--text-muted); font-size: 12.5px; padding-bottom: 24px; }
+
+  .settings-body { flex: 1; overflow-y: auto; padding: 0 20px 24px; }
+  .settings-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 22px; margin: 0 0 18px; }
+  .settings-section { margin-bottom: 26px; }
+  .settings-section h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 8px; }
+  .settings-hint { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 12px; }
+  .settings-actions { display: flex; flex-direction: column; gap: 8px; }
+  .settings-actions .primary-btn, .settings-actions .secondary-btn { margin-top: 0; }
+  .sync-code-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .sync-code { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 15px; letter-spacing: 0.04em; color: var(--gold); }
+  .sync-status { font-size: 12.5px; color: var(--text-muted); margin: 0 0 12px; }
+  .sync-join-row { display: flex; gap: 8px; margin-top: 10px; }
+  .sync-join-row input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 11px 12px; color: var(--text); font-size: 14px; font-family: inherit; }
 
   .spin { animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
