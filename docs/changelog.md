@@ -2,6 +2,12 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (2)
+
+- Added a subtle on-screen version tag (`APP_VERSION` in `app.js`, rendered top-right) so an update can be
+  visually confirmed on a device. Must be bumped by hand alongside `sw.js`'s `CACHE_NAME` — see
+  architecture.md.
+
 ## 2026-08-20
 
 - Set up `docs/` as a persistent project brain (README, architecture, backlog, decisions, changelog) and

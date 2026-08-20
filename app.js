@@ -1,3 +1,6 @@
+// Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
+const APP_VERSION = "3";
+
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
   search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
@@ -298,6 +301,7 @@ function render() {
       ${state.tab === "add" ? renderAddTab() : renderShelfTab()}
     </div>
     <div class="tabbar">${tabsHtml}</div>
+    <div class="version-tag">v${APP_VERSION}</div>
     ${renderScanner()}
   `;
 

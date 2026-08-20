@@ -68,3 +68,10 @@ delegation — listeners are re-attached on every render.
 deletes any cache whose name doesn't match the current `CACHE_NAME` — so **`CACHE_NAME` must be bumped
 whenever `SHELL_FILES` contents change**, otherwise users keep getting stale shell files. Non-shell requests
 (Google Books API, Google Fonts) always go to the network.
+
+## Version tag
+
+`app.js` defines `APP_VERSION` (rendered as a small `v{N}` tag in the top-right corner via `.version-tag` in
+`index.html`) purely so an update can be visually confirmed on a device without inspecting devtools. There
+is no shared module system between `app.js` and `sw.js`, so **`APP_VERSION` and `sw.js`'s `CACHE_NAME` must
+be bumped together by hand** whenever the shell changes — nothing enforces they stay in sync.

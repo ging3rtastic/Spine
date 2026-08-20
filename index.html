@@ -148,6 +148,11 @@
   .scanner-msg p { font-size: 13.5px; line-height: 1.6; }
   .scanner-hint { text-align: center; color: var(--text-muted); font-size: 12.5px; padding-bottom: 24px; }
 
+  .version-tag {
+    position: absolute; top: calc(6px + env(safe-area-inset-top)); right: 10px;
+    font-size: 10px; color: var(--text-muted); opacity: 0.45; pointer-events: none; z-index: 5;
+  }
+
   .spin { animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
