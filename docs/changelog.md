@@ -2,6 +2,16 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (17)
+
+- Replaced the vertical-spine bookshelf with face-out book covers, after feedback that reading rotated
+  spine text on a phone required physically tilting your head. Books now stand with the full cover visible
+  (`.shelf-cover`, 80×120px) and a normal horizontal title/author caption below — same wood-ledge shelf
+  visual, no rotated text. Removed `renderSpine()`/`spineWidth()`/`.spine-*` in favor of
+  `renderShelfItem()`/`.shelf-item`/`.shelf-cover*`. Verified with mock covers (including long titles/authors
+  and a no-cover fallback) at two viewport widths, plus detail-view tap-through, in Playwright before
+  shipping. Bumped `APP_VERSION` to `9`.
+
 ## 2026-08-20 (16)
 
 - Added a small cover-art "crest" (`.spine-cover`, 46px) to the top of spines that have a `thumbnail`,

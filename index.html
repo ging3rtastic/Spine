@@ -126,42 +126,43 @@
   .pill.active { border-color: var(--gold); background: rgba(201,162,75,0.14); color: var(--gold); }
   .pill.danger { color: var(--rust); margin-left: auto; }
 
-  /* Bookshelf: fixed-height spines wrap into rows; the wood ledge under every row is one repeating
-     background on the container, sized to repeat once per (spine height + row-gap). */
+  /* Bookshelf: fixed-height face-out book tiles wrap into rows; the wood ledge under every row is
+     one repeating background on the container, sized to repeat once per (item height + row-gap).
+     Each tile's cover(120px)+ledge-space(14px)+caption(~34px) = 168px is baked into the item itself,
+     so — unlike a trailing-gap approach — the last row's ledge always has room to render. */
   .shelf-case {
-    display: flex; flex-wrap: wrap; align-items: flex-end;
-    gap: 16px 3px; padding-bottom: 16px;
+    display: flex; flex-wrap: wrap; align-items: flex-start;
+    gap: 14px 10px;
     background: repeating-linear-gradient(to bottom,
-      transparent 0, transparent 158px,
-      var(--wood-edge) 158px, var(--wood-edge) 160px,
-      var(--wood) 160px, var(--wood) 172px,
-      transparent 172px, transparent 174px);
+      transparent 0, transparent 120px,
+      var(--wood-edge) 120px, var(--wood-edge) 122px,
+      var(--wood) 122px, var(--wood) 134px,
+      transparent 134px, transparent 182px);
   }
-  .spine {
-    position: relative; height: 158px; flex-shrink: 0; overflow: hidden;
-    border: none; border-radius: 3px 3px 2px 2px; cursor: pointer; font-family: inherit;
-    padding: 0 0 16px; display: flex; flex-direction: column; align-items: center;
-    box-shadow: inset -3px 0 6px rgba(0,0,0,0.25), 0 3px 6px rgba(0,0,0,0.3);
+  .shelf-item {
+    width: 80px; height: 168px; flex-shrink: 0;
+    border: none; background: none; cursor: pointer; font-family: inherit; padding: 0;
+    display: flex; flex-direction: column; align-items: flex-start; text-align: left;
     transition: transform 120ms ease;
   }
-  .spine:active { transform: translateY(-4px); }
+  .shelf-item:active { transform: translateY(-4px); }
   @media (prefers-reduced-motion: reduce) {
-    .spine { transition: none; }
-    .spine:active { transform: none; }
+    .shelf-item { transition: none; }
+    .shelf-item:active { transform: none; }
   }
-  .spine-cover {
-    width: 100%; height: 46px; object-fit: cover; object-position: center 20%;
-    flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+  .shelf-cover {
+    width: 80px; height: 120px; object-fit: cover; border-radius: 2px; flex-shrink: 0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
   }
-  .spine-title {
-    writing-mode: vertical-rl; transform: rotate(180deg);
-    font-family: 'Fraunces', serif; font-style: italic; font-weight: 600;
-    font-size: 12px; color: var(--text); letter-spacing: 0.01em;
-    flex: 1; min-height: 0; overflow: hidden; white-space: nowrap;
-    padding-top: 10px; text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+  .shelf-cover-fallback { display: flex; align-items: center; justify-content: center; color: rgba(241,234,217,0.8); }
+  .shelf-item-title {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 12px; color: var(--text);
+    margin-top: 18px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .spine-foil { position: absolute; left: 15%; right: 15%; bottom: 10px; height: 2px;
-    background: rgba(201,162,75,0.55); border-radius: 1px; }
+  .shelf-item-author {
+    font-size: 10.5px; color: var(--text-muted); margin-top: 2px;
+    width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
 
   .tabbar {
     position: absolute; bottom: 0; left: 0; right: 0; display: flex;

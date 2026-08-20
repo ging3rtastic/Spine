@@ -67,10 +67,10 @@ There is no build step, package manager, or test suite. To develop:
     ISBN when unsupported.
   - Export/Import and Firebase sync live in the Settings overlay (`renderSettings()`) — see "Sync & backup"
     above and `docs/architecture.md` for the full design.
-  - The three shelf tabs render books as an actual bookshelf (`renderSpine()`) — colored, variable-width
-    spines wrapping into rows on a CSS-drawn wood ledge — not a flat list. See `docs/architecture.md` →
-    "Bookshelf view".
-  - Tapping a book (search result or shelf spine) opens a full-screen detail view (`renderDetail()`) with
+  - The three shelf tabs render books as an actual bookshelf (`renderShelfItem()`) — face-out covers with a
+    horizontal title/author caption, wrapping into rows on a CSS-drawn wood ledge — not a flat list. See
+    `docs/architecture.md` → "Bookshelf view".
+  - Tapping a book (search result or shelf item) opens a full-screen detail view (`renderDetail()`) with
     the untruncated description and extra Google Books metadata (publisher, categories, rating, etc.) — see
     `docs/architecture.md` → "Book detail view".
 - `sw.js` — service worker implementing a network-first strategy for the app shell files listed in

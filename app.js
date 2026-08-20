@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "8";
+const APP_VERSION = "9";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -373,29 +373,19 @@ function renderResultCard(r) {
     </div>`;
 }
 
-// Spine width scales with page count (thin books read as thin spines, thick books as thick ones),
-// clamped to a sensible range with a mid-range default when pageCount is unknown.
-function spineWidth(pageCount) {
-  if (!pageCount) return 34;
-  const w = 28 + (pageCount - 150) * (24 / 650);
-  return Math.round(Math.max(28, Math.min(52, w)));
-}
-
-function renderSpine(book) {
-  const color = spineColor(book.title || book.id);
-  const width = spineWidth(book.pageCount);
+// Face-out book on the shelf: cover art stands upright with a normal horizontal title/author
+// caption below it, like a bookstore's face-out display — avoids the readability problems of
+// spine-style vertical text while keeping the wood-shelf visual identity.
+function renderShelfItem(book) {
   const label = `${book.title} by ${book.authors || "Unknown author"}`;
-  // Truncated in JS, not left to CSS ellipsis: text-overflow + writing-mode: vertical-rl is
-  // unreliable across mobile browsers and can let long titles spill out past the spine's height.
-  const title = truncate(book.title, 26);
-  // A small cover-art crest at the top, like many real spines have, rather than covering the
-  // whole spine with a busy photo — keeps it reading as a spine, not a shrunk cover thumbnail.
-  const cover = book.thumbnail ? `<img class="spine-cover" src="${esc(book.thumbnail)}" alt="" />` : "";
+  const cover = book.thumbnail
+    ? `<img class="shelf-cover" src="${esc(book.thumbnail)}" alt="" />`
+    : `<div class="shelf-cover shelf-cover-fallback" style="background:${spineColor(book.title || book.id)}">${ICON.book}</div>`;
   return `
-    <button class="spine" style="background:${color};width:${width}px" data-detail="${esc(book.id)}" data-detail-source="library" aria-label="${esc(label)}">
+    <button class="shelf-item" data-detail="${esc(book.id)}" data-detail-source="library" aria-label="${esc(label)}">
       ${cover}
-      <span class="spine-title">${esc(title)}</span>
-      <span class="spine-foil"></span>
+      <span class="shelf-item-title">${esc(book.title)}</span>
+      <span class="shelf-item-author">${esc(book.authors || "Unknown author")}</span>
     </button>`;
 }
 
@@ -455,7 +445,7 @@ function renderShelfTab() {
 
   const body = s.length === 0
     ? renderEmpty(meta.icon, emptyText)
-    : `<div class="shelf-case">${s.map(renderSpine).join("")}</div>`;
+    : `<div class="shelf-case">${s.map(renderShelfItem).join("")}</div>`;
 
   return `
     ${renderHeader(meta.label, `${s.length} book${s.length === 1 ? "" : "s"}`)}

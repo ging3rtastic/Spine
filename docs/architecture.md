@@ -125,45 +125,36 @@ update mechanism.
 ## Bookshelf view
 
 The three shelf tabs (To Read / Reading / Read) render books as an actual bookshelf rather than a flat list:
-`renderSpine(book)` (in `app.js`) outputs a fixed-height, variable-width `<button class="spine">` — color
-from the existing `spineColor()` hash function (unchanged, still a 7-tone jewel palette), width from
-`spineWidth(pageCount)` (linear clamp, ~28px for a thin/unknown book up to ~52px for an 800+ page one). These
-sit in a `flex-wrap` container (`.shelf-case` in `index.html`) with no JS row-chunking — the browser wraps
-spines into new rows on its own once a row's width fills up.
+`renderShelfItem(book)` (in `app.js`) outputs a fixed-size `<button class="shelf-item">` — a face-out book
+cover (`.shelf-cover`, 80×120px `object-fit: cover`) with a normal horizontal title/author caption below it,
+truncated with CSS ellipsis. These sit in a `flex-wrap` container (`.shelf-case` in `index.html`) with no JS
+row-chunking — the browser wraps items into new rows on its own once a row's width fills up. Books without a
+`thumbnail` get a `.shelf-cover-fallback` tile instead: a solid block colored via the existing `spineColor()`
+hash function with a book icon, same size as a real cover.
+
+**This replaced an earlier vertical-spine design** (title rotated `writing-mode: vertical-rl`, à la a real
+book's spine edge) after user feedback that reading rotated text on a phone — "have to turn your head... just
+like in the store" — wasn't good mobile UX, even though it was visually authentic. Face-out display (books
+standing with their cover facing out) is also a real, common bookstore/library fixture, so the pivot kept the
+"bookshelf" identity while fixing the actual complaint: no rotated text anywhere now, and the cover art —
+which a color-only spine had been criticized for hiding — is now the primary visual per item, not a small
+crest. See decisions.md for the fuller before/after reasoning.
 
 The wood ledge under every row is **one** `repeating-linear-gradient` on `.shelf-case`'s background, not a
-per-row element: since every spine shares the same fixed height (158px) and the container uses a matching
-row-gap (16px), the gradient's 174px repeat cycle (spine height, then a 2px highlight lip + 12px wood board
-within the gap) lines up under every wrapped row automatically. `.shelf-case` needs `padding-bottom: 16px` —
-without it, the container's natural height stops right after the last row's spines, cutting off before the
-ledge portion of that final cycle has room to render.
+per-row element: cover height (120px) + a 14px ledge zone (2px highlight lip + 12px wood board) + caption
+height (~34px) are baked into each `.shelf-item`'s own fixed height (168px), and the gradient's 182px repeat
+cycle (168px item + 14px row-gap) lines up under every wrapped row automatically — including the last row,
+since the ledge lives inside each item's own box rather than in trailing space after it (the earlier spine
+version needed an explicit `padding-bottom` hack for exactly this reason; this version doesn't).
 
-Spine titles use `writing-mode: vertical-rl` + `rotate(180deg)` for bottom-to-top text (matching how English
-book spines are actually printed), Fraunces italic (the app's existing display face). The title is truncated
-in **JS** (`truncate(book.title, 26)`), not left to CSS ellipsis — `text-overflow: ellipsis` combined with
-`writing-mode: vertical-rl` is unreliable across mobile browsers, and was letting long titles spill out past
-the spine's fixed height on at least one real device (reported as "tiles with the image and name below").
-`.spine` also has `overflow: hidden` as a hard backstop regardless of the title-clipping mechanism. Author is
-deliberately omitted from the spine itself — real spines lead with title, and author is one tap away in the
-detail view — keeping the spine uncluttered.
+Tapping an item reuses `data-detail`/`data-detail-source="library"` exactly as both earlier list designs did,
+so `attachEvents()`'s detail-opening listener needed no changes across any of these redesigns. A small
+`translateY(-4px)` press lift (mimics pulling a book partway off the shelf) is suppressed under
+`prefers-reduced-motion`.
 
-When a book has a `thumbnail`, a small `.spine-cover` image crest renders at the top of the spine (46px
-tall, `object-fit: cover`), echoing the small cover-art elements real spines often carry — added after
-initial feedback that a color-only spine felt like it was missing the book's cover entirely. Deliberately
-*not* a full-spine background image: covering the whole spine in photo art would fight the vertical title
-text for legibility and stop it reading as a spine. Books without a `thumbnail` render exactly as before —
-solid color, full-height title, no gap where the crest would have been. A thin low-opacity gold
-`.spine-foil` line near the base (always present, thumbnail or not) echoes gold-stamped hardcover titling.
-
-Tapping a spine reuses `data-detail`/`data-detail-source="library"` exactly as the old row markup did, so
-`attachEvents()`'s existing detail-opening listener needed no changes. A small `translateY(-4px)` press lift
-(mimics pulling a book partway out) is suppressed under `prefers-reduced-motion`.
-
-This replaced the flat `.row-btn` list (`renderRow()`, now removed) entirely — not a toggle-able alternate
-view — per an explicit decision that the bookshelf should be the one signature visual move rather than a
-second layout to maintain. Search results on the Add tab were deliberately left as flat cards: that view's
-job is comparing/picking from search hits, not browsing books you already own, so the shelf metaphor doesn't
-apply there. See decisions.md.
+Search results on the Add tab were deliberately left as flat cards throughout all of this: that view's job is
+comparing/picking from search hits, not browsing books you already own, so the shelf metaphor doesn't apply
+there.
 
 ## Book detail view
 

@@ -2,6 +2,23 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Face-out covers, not vertical spines
+
+The bookshelf view originally rendered books as literal spines: solid color, title rotated
+`writing-mode: vertical-rl` to read bottom-to-top like a real spine's edge. Visually authentic, but the user
+pushed back hard after using it for real — reading rotated text on a phone meant tilting your head, "just
+like in the store," which is a fun physical quirk of an actual bookshelf but bad UX for something you glance
+at often. There was also a parallel complaint that a solid-color spine felt like it was hiding the book's
+cover (a small cover-art crest was added as a partial fix, but didn't fully address either problem).
+
+Rather than iterate further on spines, switched to face-out display: books stand with the cover fully
+visible and a normal horizontal title/author caption underneath — no rotated text anywhere. This is still a
+real, common bookstore/library fixture (face-out shelving), so it keeps the "bookshelf" identity and the
+wood-ledge visual the user liked, while directly fixing both complaints: the cover art is now the primary
+visual per book, and nothing needs to be read sideways. Net simplification too — no more `spineWidth()`
+page-count-based sizing (covers are a fixed size) and no more cross-browser risk from
+`writing-mode` + `text-overflow: ellipsis` interactions.
+
 ## Bookshelf view replaces the shelf list, doesn't toggle with it
 
 The three shelf tabs render books as spines on a shelf instead of a flat row list. Considered adding a
