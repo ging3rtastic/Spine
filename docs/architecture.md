@@ -130,14 +130,15 @@ link below, so "restore a backup" and "link a second device" share one non-destr
 Optional, opt-in layer on top of `localStorage`, using Firestore's free Spark tier. Linked by a short
 **sync code** rather than a full account/login system — no signup flow, at the cost of anyone who has the
 exact code being able to read/write that library (accepted trade-off for a personal, low-sensitivity book
-list; see decisions.md).
+list; see decisions.md). **Live and confirmed working** (project `spine-aec50`): setup is complete, and a
+device linking via sync code plus a live cross-device update via `onSnapshot` have both been tested
+end-to-end.
 
-**Setup required before this works** (can't be automated — needs a Google account):
+**One-time setup that was required** (can't be automated — needed a Google account; all done):
 1. Create a free project at console.firebase.google.com (Spark plan, no card).
 2. Firestore Database → create in Native mode.
 3. Authentication → Sign-in method → enable **Anonymous**.
-4. Project settings → add a Web App → copy the config object into `FIREBASE_CONFIG` in `app.js` (done —
-   project `spine-aec50`).
+4. Project settings → add a Web App → copy the config object into `FIREBASE_CONFIG` in `app.js`.
 5. Firestore → Rules →
    ```
    rules_version = '2';

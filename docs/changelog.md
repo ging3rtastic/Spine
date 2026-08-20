@@ -2,6 +2,12 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (12)
+
+- Confirmed cross-device sync end-to-end: Firebase project setup complete (Anonymous auth enabled, security
+  rules published), a device linked via sync code pulled in an existing library, and a change made on one
+  device showed up live on the other via `onSnapshot`. Sync is fully live, not just scaffolded.
+
 ## 2026-08-20 (11)
 
 - Filled in real `FIREBASE_CONFIG` values (project `spine-aec50`) — sync is now wired to a real backend
