@@ -34,12 +34,15 @@ A "book" object, as stored in `state.library` / `localStorage`:
   previewLink: string|null,      // Google Books page URL
   status: "to-read" | "reading" | "read",
   addedAt: number,                // Date.now() at insertion
+  finishedAt: number|undefined,    // Date.now() when status last became "read" — see Reading stats below
 }
 ```
 
 The metadata fields (subtitle through previewLink) were added for the book detail view (see below) and are
 only as complete as what Google Books returned at add time — books added before this field set existed will
-just render those rows blank in the detail view rather than erroring.
+just render those rows blank in the detail view rather than erroring. Same story for `finishedAt`: books
+marked "read" before it existed simply don't have it, and callers fall back to `addedAt` rather than treating
+its absence as an error.
 
 Persisted as JSON under the `localStorage` key `spine.library`. `localStorage` remains the source of truth
 for instant boot-time reads; Firestore (see "Cross-device sync" below) is an optional layer on top, only
@@ -177,6 +180,26 @@ different truncation levels.
   logic, just a second place those buttons can render.
 - Search results show add-to-shelf pills; library books show status-change pills + Remove, matching what
   the source list already offered — a book opened from search never shows Remove, since it isn't saved yet.
+
+## Reading stats
+
+Settings panel → "View reading stats" opens `renderStats()` (same `.scanner-overlay` full-screen pattern as
+Detail/Settings/Scanner). `computeStats(scope)` is a pure function: filters `state.library` to
+`status === "read"`, and for `scope === "year"` further filters to books where
+`finishedAt || addedAt` falls in the current calendar year (`scope === "all"` skips that filter). From the
+scoped set it derives: count, total pages (summing `pageCount`, treating missing as 0), a genre tally (split
+each book's `categories` on `,`, count occurrences, take the top 5), and the single longest book by
+`pageCount`. Nothing beyond `finishedAt` is persisted for this — everything else is computed on demand each
+time the overlay opens, so there's no separate stats state to keep in sync with the library.
+
+`state.statsScope` ("year" | "all", default "year") drives the scope toggle, styled as two `.pill` buttons
+reusing the same active/inactive styling as status pills elsewhere. Opening Stats closes Settings first
+(`stats-btn`'s click handler sets `settingsOpen = false` alongside `statsOpen = true`) since both are
+full-screen `.scanner-overlay`s and only one should be up at a time — same one-overlay-at-a-time convention
+already implicit for Scanner/Detail/Settings.
+
+See "Data model" above for `finishedAt` and decisions.md for why it falls back to `addedAt` rather than
+triggering a migration for books marked "read" before this feature existed.
 
 ## Backup (Export / Import)
 

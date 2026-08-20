@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "9";
+const APP_VERSION = "10";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -51,6 +51,8 @@ const state = {
   syncCode: localStorage.getItem("spine.syncCode") || null,
   syncStatus: "idle",
   syncCodeInput: "",
+  statsOpen: false,
+  statsScope: "year", // "year" | "all"
 };
 
 function loadLibrary() {
@@ -306,8 +308,11 @@ function addBook(book, status) {
   const existing = state.library.find(b => b.id === book.id);
   if (existing) {
     existing.status = status;
+    if (status === "read") existing.finishedAt = Date.now();
   } else {
-    state.library.unshift({ ...book, status, addedAt: Date.now() });
+    const entry = { ...book, status, addedAt: Date.now() };
+    if (status === "read") entry.finishedAt = Date.now();
+    state.library.unshift(entry);
   }
   saveLibrary();
   state.justAdded[book.id] = status;
@@ -315,7 +320,12 @@ function addBook(book, status) {
 }
 function setStatus(id, status) {
   const b = state.library.find(x => x.id === id);
-  if (b) b.status = status;
+  if (b) {
+    b.status = status;
+    // Overwritten each time a book re-enters "read" — represents "most recently finished,"
+    // which is what stats care about. Not cleared on leaving "read", so history isn't lost.
+    if (status === "read") b.finishedAt = Date.now();
+  }
   saveLibrary();
   render();
 }
@@ -332,6 +342,33 @@ function shelves() {
     reading: state.library.filter(b => b.status === "reading"),
     read: state.library.filter(b => b.status === "read"),
   };
+}
+
+// Derives everything the Stats view shows from state.library on demand — no separate persisted
+// state beyond finishedAt. Books finished before finishedAt existed fall back to addedAt; an
+// acknowledged approximation rather than a migration, since this is a single-user app.
+function computeStats(scope) {
+  const currentYear = new Date().getFullYear();
+  const read = state.library.filter(b => b.status === "read");
+  const scoped = scope === "year"
+    ? read.filter(b => new Date(b.finishedAt || b.addedAt).getFullYear() === currentYear)
+    : read;
+
+  const totalPages = scoped.reduce((sum, b) => sum + (b.pageCount || 0), 0);
+
+  const genreCounts = new Map();
+  for (const b of scoped) {
+    for (const g of (b.categories || "").split(",").map(s => s.trim()).filter(Boolean)) {
+      genreCounts.set(g, (genreCounts.get(g) || 0) + 1);
+    }
+  }
+  const topGenres = Array.from(genreCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  const longest = scoped.reduce((max, b) => (b.pageCount || 0) > (max?.pageCount || 0) ? b : max, null);
+
+  return { count: scoped.length, totalPages, topGenres, longest };
 }
 
 function openDetail(id, source) {
@@ -568,6 +605,11 @@ function renderSettings() {
       <div class="settings-body">
         <h2 class="settings-title">Settings</h2>
         <div class="settings-section">
+          <h3>Reading stats</h3>
+          <p class="settings-hint">See how much you've read — books finished, pages, favorite genres.</p>
+          <button class="secondary-btn" id="stats-btn">View reading stats</button>
+        </div>
+        <div class="settings-section">
           <h3>Backup</h3>
           <p class="settings-hint">Save your library as a file, or restore one you saved earlier.</p>
           <div class="settings-actions">
@@ -580,6 +622,58 @@ function renderSettings() {
           <h3>Sync across devices</h3>
           ${renderSyncSection()}
         </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderStats() {
+  if (!state.statsOpen) return "";
+  const stats = computeStats(state.statsScope);
+
+  const body = stats.count === 0
+    ? renderEmpty(ICON.check, state.statsScope === "year"
+        ? "No books finished yet this year — mark one Read to see your stats here."
+        : "No books finished yet — mark one Read to see your stats here.")
+    : `
+      <div class="stat-tiles">
+        <div class="stat-tile">
+          <div class="stat-number">${stats.count}</div>
+          <div class="stat-label">book${stats.count === 1 ? "" : "s"} read</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-number">${stats.totalPages.toLocaleString()}</div>
+          <div class="stat-label">pages read</div>
+        </div>
+      </div>
+      ${stats.topGenres.length ? `
+        <div class="settings-section">
+          <h3>Top genres</h3>
+          <div class="stats-genre-list">
+            ${stats.topGenres.map(([g, c]) => `
+              <div class="stats-genre-row">
+                <span>${esc(g)}</span>
+                <span class="stats-genre-count">${c}</span>
+              </div>`).join("")}
+          </div>
+        </div>` : ""}
+      ${stats.longest && stats.longest.pageCount ? `
+        <p class="stats-fact">Longest read: <strong>${esc(stats.longest.title)}</strong> (${stats.longest.pageCount} pages)</p>
+      ` : ""}
+    `;
+
+  return `
+    <div class="scanner-overlay" id="stats-overlay">
+      <div class="scanner-close-row">
+        <button class="scanner-close" id="stats-close">${ICON.x}</button>
+      </div>
+      <div class="stats-body">
+        <h2 class="settings-title">Reading Stats</h2>
+        <div class="pill-row stats-scope-row">
+          <button class="pill ${state.statsScope === "year" ? "active" : ""}" data-statsscope="year">This Year</button>
+          <button class="pill ${state.statsScope === "all" ? "active" : ""}" data-statsscope="all">All Time</button>
+        </div>
+        ${body}
       </div>
     </div>
   `;
@@ -607,6 +701,7 @@ function render() {
     ${renderScanner()}
     ${renderDetail()}
     ${renderSettings()}
+    ${renderStats()}
   `;
 
   attachEvents();
@@ -702,6 +797,14 @@ function attachEvents() {
   if (stopSyncBtn) stopSyncBtn.addEventListener("click", () => {
     const msg = "Stop syncing this device? Your books will stay here but won't update from other devices anymore.";
     if (confirm(msg)) disableSync();
+  });
+
+  const statsBtn = document.getElementById("stats-btn");
+  if (statsBtn) statsBtn.addEventListener("click", () => { state.settingsOpen = false; state.statsOpen = true; render(); });
+  const statsClose = document.getElementById("stats-close");
+  if (statsClose) statsClose.addEventListener("click", () => { state.statsOpen = false; render(); });
+  document.querySelectorAll("[data-statsscope]").forEach(el => {
+    el.addEventListener("click", () => { state.statsScope = el.dataset.statsscope; render(); });
   });
 }
 

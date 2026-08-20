@@ -2,6 +2,16 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (18)
+
+- Added a Reading Stats view (Settings → "View reading stats"): books read, total pages, top genres, and
+  longest book read, toggleable between "This Year" and "All Time" (`computeStats()`, `renderStats()` in
+  `app.js`). Added `finishedAt`, stamped whenever a book's status becomes "read", so stats can bucket by the
+  year a book was actually finished rather than the year it was added; books marked "read" before this field
+  existed fall back to `addedAt`. Verified against known test data (this-year/all-time counts, genre tally,
+  longest book, legacy no-`finishedAt` book, empty state) in Playwright before shipping. Bumped
+  `APP_VERSION` to `10`.
+
 ## 2026-08-20 (17)
 
 - Replaced the vertical-spine bookshelf with face-out book covers, after feedback that reading rotated

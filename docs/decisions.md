@@ -2,6 +2,17 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## `finishedAt` falls back to `addedAt`, no migration
+
+Added `finishedAt` (stamped in `setStatus`/`addBook` whenever a book's status becomes "read") so reading
+stats could bucket "books read" by year without misattributing books that sat on a shelf a long time before
+being finished. Books already marked "read" before this field existed don't have it. Considered writing a
+one-time migration to backfill `finishedAt` from `addedAt` for those, but that would bake in a value that's
+actively wrong (when the book was *added*, not finished) as if it were real data. Simpler and more honest to
+leave it missing and let `computeStats()` fall back to `addedAt` only at read time — an acknowledged
+approximation for old data, not a permanent falsehood written into storage. Not worth more engineering than
+that for a single-user app.
+
 ## Face-out covers, not vertical spines
 
 The bookshelf view originally rendered books as literal spines: solid color, title rotated

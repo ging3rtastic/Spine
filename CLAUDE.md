@@ -73,6 +73,10 @@ There is no build step, package manager, or test suite. To develop:
   - Tapping a book (search result or shelf item) opens a full-screen detail view (`renderDetail()`) with
     the untruncated description and extra Google Books metadata (publisher, categories, rating, etc.) — see
     `docs/architecture.md` → "Book detail view".
+  - Settings → "View reading stats" opens `renderStats()`: books read / pages / top genres / longest book,
+    toggleable This Year vs. All Time, computed on demand from `state.library` via `computeStats()`. Relies
+    on `finishedAt` (stamped when a book's status becomes "read") — see `docs/architecture.md` → "Reading
+    stats".
 - `sw.js` — service worker implementing a network-first strategy for the app shell files listed in
   `SHELL_FILES` (network first, cache as offline fallback only — see "PWA update model" above) and network
   passthrough for everything else (Google Books API calls, fonts).
