@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "4";
+const APP_VERSION = "5";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -357,9 +357,10 @@ function attachEvents() {
   if (versionTag) versionTag.addEventListener("click", forceRefresh);
 }
 
-// Tapping the version badge unregisters the service worker and wipes its caches (Cache Storage
-// only — never touches localStorage, so the book library is untouched), then reloads. A manual
-// escape hatch since the SW's own update check can lag on mobile browsers.
+// Tapping the version badge unregisters the service worker, wipes its caches (Cache Storage
+// only — never touches localStorage, so the book library is untouched), then re-registers with
+// HTTP caching disabled so sw.js itself can't be served stale, before reloading. A manual escape
+// hatch since the SW's own update check can lag on mobile browsers.
 async function forceRefresh() {
   const tag = document.querySelector(".version-tag");
   if (tag) tag.textContent = "Updating…";
@@ -371,6 +372,9 @@ async function forceRefresh() {
     if ("caches" in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if ("serviceWorker" in navigator) {
+      await navigator.serviceWorker.register("sw.js", { updateViaCache: "none" });
     }
   } finally {
     location.reload();
@@ -445,6 +449,6 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {});
   });
 }

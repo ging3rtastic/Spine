@@ -77,8 +77,12 @@ is no shared module system between `app.js` and `sw.js`, so **`APP_VERSION` and 
 be bumped together by hand** whenever the shell changes — nothing enforces they stay in sync.
 
 The version tag is a tappable badge (styled like the app's `.pill` elements): tapping it calls
-`forceRefresh()`, which unregisters the service worker and deletes Cache Storage, then reloads — a manual
-escape hatch for mobile browsers where the normal service-worker update check can lag by a load or two.
-This is **safe for the book library**: it only touches Cache Storage and the SW registration, never
-`localStorage` (where `spine.library` lives) — unlike the browser's "Clear Website Data" setting, which
-wipes everything for the origin and would delete the library too.
+`forceRefresh()`, which unregisters the service worker, deletes Cache Storage, re-registers `sw.js` with
+`updateViaCache: "none"` (so the browser can't serve a stale HTTP-cached copy of the script itself), then
+reloads — a manual escape hatch for mobile browsers where the normal service-worker update check can lag by
+a load or two. This is **safe for the book library**: it only touches Cache Storage and the SW registration,
+never `localStorage` (where `spine.library` lives) — unlike the browser's "Clear Website Data" setting,
+which wipes everything for the origin and would delete the library too.
+
+The boot-time registration (bottom of `app.js`) also passes `updateViaCache: "none"`, so ordinary automatic
+update checks (not just badge taps) never trust a cached `sw.js`.

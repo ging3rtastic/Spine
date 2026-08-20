@@ -2,6 +2,13 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (6)
+
+- Badge's `forceRefresh()` and the boot-time registration now both pass `updateViaCache: "none"` to
+  `serviceWorker.register()`, so `sw.js` itself can never be served from the browser's HTTP cache — closes
+  the last gap where a stale service worker script could survive an unregister+clear-caches cycle. Bumped
+  to `spine-shell-v5` / `APP_VERSION "5"`.
+
 ## 2026-08-20 (5)
 
 - Bumped `CACHE_NAME` to `spine-shell-v4` and `APP_VERSION` to `4` — the badge commit (3582cf7) changed
