@@ -136,8 +136,8 @@ list; see decisions.md).
 1. Create a free project at console.firebase.google.com (Spark plan, no card).
 2. Firestore Database → create in Native mode.
 3. Authentication → Sign-in method → enable **Anonymous**.
-4. Project settings → add a Web App → copy the config object into `FIREBASE_CONFIG` in `app.js` (currently
-   `"REPLACE_ME"` placeholders — see backlog.md).
+4. Project settings → add a Web App → copy the config object into `FIREBASE_CONFIG` in `app.js` (done —
+   project `spine-aec50`).
 5. Firestore → Rules →
    ```
    rules_version = '2';

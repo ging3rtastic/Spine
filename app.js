@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "3";
+const APP_VERSION = "4";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -122,12 +122,12 @@ function importLibraryFile(file) {
 // from Firestore security rules requiring anonymous auth, not from hiding these values. Fill in
 // after creating a free project at console.firebase.google.com — see docs/architecture.md.
 const FIREBASE_CONFIG = {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME",
+  apiKey: "AIzaSyByLPNFFs6KfoubsGcPuoBbqrp7GCMwC9s",
+  authDomain: "spine-aec50.firebaseapp.com",
+  projectId: "spine-aec50",
+  storageBucket: "spine-aec50.firebasestorage.app",
+  messagingSenderId: "223528506805",
+  appId: "1:223528506805:web:4083acecbf06814eb375fc",
 };
 
 function loadScript(src) {

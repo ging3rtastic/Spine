@@ -2,6 +2,11 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (11)
+
+- Filled in real `FIREBASE_CONFIG` values (project `spine-aec50`) — sync is now wired to a real backend
+  instead of placeholder config. Bumped `APP_VERSION` to `4`.
+
 ## 2026-08-20 (10)
 
 - Added a Settings panel (new gear icon in the header) with two features: **Export/Import** (JSON file
