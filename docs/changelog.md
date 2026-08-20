@@ -2,6 +2,14 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (9)
+
+- Fixed the real cause of the bottom-tab-bar-requires-scrolling bug on real mobile devices: `100dvh` alone
+  doesn't track the actual usable viewport reliably on some mobile browsers. Added the standard
+  `--app-height` (from `window.innerHeight`) workaround in `app.js`. Moving the badge to the tab bar
+  (previous entry) did NOT fix this — that was a wrong hypothesis — so moved the badge back to its original
+  top-right overlay per preference. Bumped `APP_VERSION` to `2` to confirm the fix visually.
+
 ## 2026-08-20 (8)
 
 - Moved the version badge from a top overlay (`position: absolute`, anchored via

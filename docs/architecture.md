@@ -77,17 +77,25 @@ This replaced an earlier cache-first strategy that required manually bumping `CA
 change — that approach was dropped because it was easy to forget (happened twice) and doesn't fit rapid
 iteration. See decisions.md.
 
+## Viewport height fix
+
+On some real mobile browsers (notably installed PWAs), `100dvh` alone doesn't reliably track the actual
+usable viewport, which left the bottom tab bar cut off and requiring a scroll to reach it — reproducible
+only on real devices, not desktop responsive-mode emulation. Fixed with the standard workaround: `app.js`
+sets a `--app-height` CSS custom property from `window.innerHeight` on load/`resize`/`orientationchange`,
+and `#app` uses `height: var(--app-height, 100dvh)` (the plain `100dvh` declaration stays as a pre-JS
+fallback for the very first paint).
+
 ## Version tag
 
-`app.js` defines `APP_VERSION` (rendered as a small `v{N}` badge, a flex item at the end of the fixed
-`.tabbar` row via `.version-tag` in `index.html`). Because the shell is network-first now, this number is
+`app.js` defines `APP_VERSION` (rendered as a small `v{N}` badge, `position: absolute` in the top-right
+corner of `#app` via `.version-tag` in `index.html`). Because the shell is network-first now, this number is
 **purely a manual, optional label** for eyeballing "did a deploy happen" — it does not need to be bumped on
 every commit, and nothing depends on it for correctness.
 
-It originally lived as a `position: absolute` overlay near the top of `#app`, anchored with
-`env(safe-area-inset-top)`. That combination triggered a mobile-browser quirk where the page misjudged its
-own rendered height and started scrolling, crowding the bottom tab bar. Moved it into the tab bar itself
-(already a proven-safe fixed row) to sidestep the issue rather than debug the exact cause.
+It was briefly moved into the bottom tab bar on a hunch that the top overlay was the cause of a
+mobile-scroll bug (see "Viewport height fix" below); that turned out to be unrelated, so it's back at the
+top per preference.
 
 The version tag is a tappable badge (styled like the app's `.pill` elements): tapping it calls
 `forceRefresh()`, which unregisters the service worker, deletes Cache Storage, re-registers `sw.js` with

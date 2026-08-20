@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "1";
+const APP_VERSION = "2";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -300,7 +300,8 @@ function render() {
     <div class="content">
       ${state.tab === "add" ? renderAddTab() : renderShelfTab()}
     </div>
-    <div class="tabbar">${tabsHtml}<div class="version-tag">v${APP_VERSION}</div></div>
+    <div class="tabbar">${tabsHtml}</div>
+    <div class="version-tag">v${APP_VERSION}</div>
     ${renderScanner()}
   `;
 
@@ -445,6 +446,18 @@ function stopScanner() {
 }
 
 // ---------- Boot ----------
+
+// 100dvh alone doesn't reliably match the real usable viewport on some mobile browsers (notably
+// installed PWAs, where the on-screen keyboard or browser chrome can throw it off), which was
+// leaving the bottom tab bar cut off and requiring a scroll to reach it. Track the real height
+// via window.innerHeight instead and feed it in as --app-height, with 100dvh as a pre-JS fallback.
+function setAppHeight() {
+  document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
+}
+setAppHeight();
+window.addEventListener("resize", setAppHeight);
+window.addEventListener("orientationchange", setAppHeight);
+
 render();
 
 if ("serviceWorker" in navigator) {
