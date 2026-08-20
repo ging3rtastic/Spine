@@ -68,6 +68,9 @@ There is no build step, package manager, or test suite. To develop:
     ISBN when unsupported.
   - Export/Import and Firebase sync live in the Settings overlay (`renderSettings()`) — see "Sync & backup"
     above and `docs/architecture.md` for the full design.
+  - Tapping a book (search result or shelf row) opens a full-screen detail view (`renderDetail()`) with the
+    untruncated description and extra Google Books metadata (publisher, categories, rating, etc.) — see
+    `docs/architecture.md` → "Book detail view".
 - `sw.js` — service worker implementing a network-first strategy for the app shell files listed in
   `SHELL_FILES` (network first, cache as offline fallback only — see "PWA update model" above) and network
   passthrough for everything else (Google Books API calls, fonts).

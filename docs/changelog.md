@@ -2,6 +2,16 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-08-20 (13)
+
+- Added a book detail view: tapping a book in search results or a shelf opens a full-screen overlay with
+  the untruncated description plus extra Google Books metadata (publisher, published date, categories,
+  rating, page count, a "View on Google Books" link). Captures more fields from the Google Books API at
+  search time (`subtitle`, `publisher`, `publishedDate`, `categories`, `averageRating`, `ratingsCount`,
+  `language`, `previewLink`) so they're available later without a second network call. Replaced the old
+  shelf-row inline expand (which still truncated at 400 chars) with this single view. Bumped `APP_VERSION`
+  to `5`.
+
 ## 2026-08-20 (12)
 
 - Confirmed cross-device sync end-to-end: Firebase project setup complete (Anonymous auth enabled, security

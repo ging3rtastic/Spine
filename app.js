@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "4";
+const APP_VERSION = "5";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -45,8 +45,9 @@ const state = {
   searching: false,
   searchError: null,
   scanning: false,
-  openRowId: null,
   justAdded: {},
+  detailId: null,
+  detailSource: null, // "results" | "library"
   settingsOpen: false,
   syncCode: localStorage.getItem("spine.syncCode") || null,
   syncStatus: "idle",
@@ -258,10 +259,18 @@ async function lookupBooks(query) {
     return {
       id: isbn13 || isbn10 || item.id,
       title: v.title || "Untitled",
+      subtitle: v.subtitle || "",
       authors: (v.authors || []).join(", "),
       description: v.description || "",
       thumbnail: v.imageLinks?.thumbnail?.replace("http://", "https://") || null,
       pageCount: v.pageCount || null,
+      publisher: v.publisher || "",
+      publishedDate: v.publishedDate || "",
+      categories: (v.categories || []).join(", "),
+      averageRating: v.averageRating || null,
+      ratingsCount: v.ratingsCount || null,
+      language: v.language || "",
+      previewLink: v.previewLink || null,
     };
   });
 }
@@ -326,6 +335,20 @@ function shelves() {
   };
 }
 
+function openDetail(id, source) {
+  state.detailId = id;
+  state.detailSource = source;
+  render();
+}
+
+// Looks the book up fresh from its source list each render, rather than snapshotting it at open
+// time, so status changes made from within the detail view are reflected immediately.
+function getDetailBook() {
+  if (!state.detailId) return null;
+  const list = state.detailSource === "results" ? state.results : state.library;
+  return list.find(b => b.id === state.detailId) || null;
+}
+
 function renderResultCard(r) {
   const cover = r.thumbnail
     ? `<img class="cover" src="${esc(r.thumbnail)}" alt="" />`
@@ -339,31 +362,27 @@ function renderResultCard(r) {
 
   return `
     <div class="card result-card">
-      ${cover}
-      <div style="flex:1;min-width:0;">
-        <div class="result-title">${esc(r.title)}</div>
-        <div class="result-author">${esc(r.authors || "Unknown author")}</div>
-        ${desc}
-        <div class="pill-row">${pills}</div>
-      </div>
+      <button class="card-open" data-detail="${esc(r.id)}" data-detail-source="results">
+        ${cover}
+        <div style="flex:1;min-width:0;">
+          <div class="result-title">${esc(r.title)}</div>
+          <div class="result-author">${esc(r.authors || "Unknown author")}</div>
+          ${desc}
+        </div>
+      </button>
+      <div class="pill-row">${pills}</div>
     </div>`;
 }
 
 function renderRow(book) {
   const spine = spineColor(book.title || book.id);
-  const open = state.openRowId === book.id;
   const thumb = book.thumbnail
     ? `<img class="row-thumb" src="${esc(book.thumbnail)}" alt="" />`
     : `<div class="row-thumb-fallback">${ICON.book}</div>`;
-  const desc = book.description ? `<p class="row-desc">${esc(truncate(book.description, 400))}</p>` : "";
-  const pills = Object.entries(STATUS_META).map(([key, meta]) => `
-    <button class="pill ${book.status === key ? "active" : ""}" data-setstatus="${esc(book.id)}" data-status="${key}">
-      ${meta.icon} ${meta.label}
-    </button>`).join("");
 
   return `
     <div class="card">
-      <button class="row-btn" data-togglerow="${esc(book.id)}">
+      <button class="row-btn" data-detail="${esc(book.id)}" data-detail-source="library">
         <div class="spine-bar" style="background:${spine}"></div>
         <div class="row-main">
           ${thumb}
@@ -371,16 +390,9 @@ function renderRow(book) {
             <div class="row-title">${esc(book.title)}</div>
             <div class="row-author">${esc(book.authors || "Unknown author")}</div>
           </div>
-          <div class="chevron ${open ? "open" : ""}">${ICON.chevron}</div>
+          <div class="chevron">${ICON.chevron}</div>
         </div>
       </button>
-      <div class="row-detail ${open ? "open" : ""}">
-        ${desc}
-        <div class="pill-row">
-          ${pills}
-          <button class="pill danger" data-remove="${esc(book.id)}">${ICON.trash} Remove</button>
-        </div>
-      </div>
     </div>`;
 }
 
@@ -464,6 +476,65 @@ function renderScanner() {
   `;
 }
 
+function renderDetail() {
+  const book = getDetailBook();
+  if (!book) return "";
+
+  const cover = book.thumbnail
+    ? `<img class="detail-cover" src="${esc(book.thumbnail)}" alt="" />`
+    : `<div class="detail-cover-fallback">${ICON.book}</div>`;
+
+  const metaRows = [];
+  if (book.publisher || book.publishedDate) metaRows.push([book.publisher, book.publishedDate].filter(Boolean).join(" · "));
+  if (book.pageCount) metaRows.push(`${book.pageCount} pages`);
+  if (book.categories) metaRows.push(book.categories);
+  if (book.language) metaRows.push(book.language.toUpperCase());
+
+  const rating = book.averageRating ? `
+    <div class="detail-rating">${"★".repeat(Math.round(book.averageRating))}${"☆".repeat(5 - Math.round(book.averageRating))}
+      <span>${esc(String(book.averageRating))}${book.ratingsCount ? ` (${book.ratingsCount})` : ""}</span>
+    </div>` : "";
+
+  const desc = book.description
+    ? `<p class="detail-desc">${esc(book.description)}</p>`
+    : `<p class="detail-desc detail-desc-empty">No description available.</p>`;
+
+  const isLibraryBook = state.detailSource === "library";
+  const added = state.justAdded[book.id];
+  const actionPills = isLibraryBook
+    ? Object.entries(STATUS_META).map(([key, meta]) => `
+        <button class="pill ${book.status === key ? "active" : ""}" data-setstatus="${esc(book.id)}" data-status="${key}">
+          ${meta.icon} ${meta.label}
+        </button>`).join("") + `<button class="pill danger" data-remove="${esc(book.id)}">${ICON.trash} Remove</button>`
+    : Object.entries(STATUS_META).map(([key, meta]) => `
+        <button class="pill ${added === key ? "active" : ""}" data-add="${esc(book.id)}" data-status="${key}">
+          ${added === key ? ICON.check : ICON.plus} ${meta.label}
+        </button>`).join("");
+
+  const link = book.previewLink
+    ? `<a class="detail-link" href="${esc(book.previewLink)}" target="_blank" rel="noopener">View on Google Books</a>`
+    : "";
+
+  return `
+    <div class="scanner-overlay" id="detail-overlay">
+      <div class="scanner-close-row">
+        <button class="scanner-close" id="detail-close">${ICON.x}</button>
+      </div>
+      <div class="detail-body">
+        ${cover}
+        <h2 class="detail-title">${esc(book.title)}</h2>
+        ${book.subtitle ? `<p class="detail-subtitle">${esc(book.subtitle)}</p>` : ""}
+        <p class="detail-author">${esc(book.authors || "Unknown author")}</p>
+        ${metaRows.length ? `<p class="detail-meta">${esc(metaRows.join(" · "))}</p>` : ""}
+        ${rating}
+        ${desc}
+        <div class="pill-row">${actionPills}</div>
+        ${link}
+      </div>
+    </div>
+  `;
+}
+
 function renderSyncSection() {
   if (state.syncCode) {
     const statusText = {
@@ -539,6 +610,7 @@ function render() {
     <div class="tabbar">${tabsHtml}</div>
     <div class="version-tag">v${APP_VERSION}</div>
     ${renderScanner()}
+    ${renderDetail()}
     ${renderSettings()}
   `;
 
@@ -573,13 +645,6 @@ function attachEvents() {
       if (book) addBook(book, status);
     });
   });
-  document.querySelectorAll("[data-togglerow]").forEach(el => {
-    el.addEventListener("click", () => {
-      const id = el.dataset.togglerow;
-      state.openRowId = state.openRowId === id ? null : id;
-      render();
-    });
-  });
   document.querySelectorAll("[data-setstatus]").forEach(el => {
     el.addEventListener("click", () => setStatus(el.dataset.setstatus, el.dataset.status));
   });
@@ -589,6 +654,12 @@ function attachEvents() {
 
   const scannerClose = document.getElementById("scanner-close");
   if (scannerClose) scannerClose.addEventListener("click", stopScanner);
+
+  document.querySelectorAll("[data-detail]").forEach(el => {
+    el.addEventListener("click", () => openDetail(el.dataset.detail, el.dataset.detailSource));
+  });
+  const detailClose = document.getElementById("detail-close");
+  if (detailClose) detailClose.addEventListener("click", () => { state.detailId = null; render(); });
 
   const versionTag = document.querySelector(".version-tag");
   if (versionTag) versionTag.addEventListener("click", forceRefresh);

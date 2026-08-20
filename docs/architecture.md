@@ -18,16 +18,28 @@ A "book" object, as stored in `state.library` / `localStorage`:
 
 ```js
 {
-  id: string,          // ISBN-13, falls back to ISBN-10, falls back to Google Books volume id
+  id: string,           // ISBN-13, falls back to ISBN-10, falls back to Google Books volume id
   title: string,
-  authors: string,      // comma-joined
+  subtitle: string,       // "" if none
+  authors: string,         // comma-joined
   description: string,
   thumbnail: string|null,
   pageCount: number|null,
+  publisher: string,        // "" if unknown
+  publishedDate: string,     // "" if unknown, Google's raw string (often just a year)
+  categories: string,         // comma-joined genre tags, "" if none
+  averageRating: number|null,  // 0–5
+  ratingsCount: number|null,
+  language: string,             // ISO 639-1 code e.g. "en", "" if unknown
+  previewLink: string|null,      // Google Books page URL
   status: "to-read" | "reading" | "read",
-  addedAt: number,       // Date.now() at insertion
+  addedAt: number,                // Date.now() at insertion
 }
 ```
+
+The metadata fields (subtitle through previewLink) were added for the book detail view (see below) and are
+only as complete as what Google Books returned at add time — books added before this field set existed will
+just render those rows blank in the detail view rather than erroring.
 
 Persisted as JSON under the `localStorage` key `spine.library`. `localStorage` remains the source of truth
 for instant boot-time reads; Firestore (see "Cross-device sync" below) is an optional layer on top, only
@@ -39,14 +51,14 @@ for local storage — `saveLibrary()` also triggers a debounced cloud push when 
 There's no framework and no virtual DOM diffing. The pattern is:
 
 1. A single global `state` object (tab, library, search results, UI flags like `searching`/`scanning`/
-   `openRowId`) is the source of truth.
-2. Any action (search, add book, change status, remove, toggle row, open scanner) mutates `state` directly,
+   `detailId`) is the source of truth.
+2. Any action (search, add book, change status, remove, open scanner, open detail) mutates `state` directly,
    then calls `render()`.
 3. `render()` regenerates the *entire* `#app.innerHTML` from `state` via template-literal string building
-   (`renderAddTab`, `renderShelfTab`, `renderRow`, `renderResultCard`, etc.).
+   (`renderAddTab`, `renderShelfTab`, `renderRow`, `renderResultCard`, `renderDetail`, etc.).
 4. Because the DOM is fully replaced, `attachEvents()` re-binds all listeners after every render, using
-   `data-*` attributes on elements (`data-tab`, `data-add`, `data-setstatus`, `data-remove`,
-   `data-togglerow`) to identify what each element does and which id/status it refers to.
+   `data-*` attributes on elements (`data-tab`, `data-add`, `data-setstatus`, `data-remove`, `data-detail`)
+   to identify what each element does and which id/status it refers to.
 
 This means: whenever you add a new interactive element, it needs (a) a `data-*` attribute in the template
 string and (b) a corresponding `querySelectorAll` + listener in `attachEvents()`. There is no event
@@ -109,6 +121,27 @@ only touches Cache Storage and the SW registration, never `localStorage` (where 
 unlike the browser's "Clear Website Data" setting, which wipes everything for the origin and would delete
 the library too. Given network-first, this is now a belt-and-suspenders manual reset rather than the primary
 update mechanism.
+
+## Book detail view
+
+Tapping a book — the cover/title area of a search result card (`.card-open` in `renderResultCard`) or an
+entire shelf row (`.row-btn` in `renderRow`) — opens a full-screen detail overlay (`renderDetail()`, reuses
+the `.scanner-overlay` pattern) with the untruncated description plus whatever extra metadata Google Books
+returned (publisher, published date, page count, categories, language, rating, a "View on Google Books"
+link). This replaced the old shelf-row behavior of expanding an inline `.row-detail` panel in place (which
+still truncated the description at 400 chars) — one full view now covers both entry points instead of two
+different truncation levels.
+
+- `state.detailId` + `state.detailSource` (`"results"` or `"library"`) identify which book and which list
+  it came from; `openDetail(id, source)` sets them. `getDetailBook()` re-looks-up the book from that source
+  list on every render (rather than snapshotting it at open time), so status changes made from inside the
+  detail view show up immediately, and removing a library book while its detail is open closes the overlay
+  automatically (the lookup just returns `null`).
+- The action pills inside the detail view reuse the exact same `data-add` / `data-setstatus` / `data-remove`
+  attributes (and therefore the exact same `attachEvents()` listeners) as the list cards — no new action
+  logic, just a second place those buttons can render.
+- Search results show add-to-shelf pills; library books show status-change pills + Remove, matching what
+  the source list already offered — a book opened from search never shows Remove, since it isn't saved yet.
 
 ## Backup (Export / Import)
 
