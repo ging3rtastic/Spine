@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "11";
+const APP_VERSION = "12";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -292,6 +292,11 @@ function esc(s) {
   d.textContent = s ?? "";
   return d.innerHTML;
 }
+// esc() is for text content; attribute values additionally need quotes escaped or a value
+// containing one breaks out of value="...".
+function escAttr(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 function truncate(s, n) {
   return s.length > n ? s.slice(0, n) + "…" : s;
 }
@@ -346,19 +351,157 @@ function setOwnership(id, mark) {
   saveLibrary();
   render();
 }
+// Writing `series` (even as "") marks it manually set, which permanently wins over
+// detection for this book — including "" meaning "this is not part of a series".
+function setSeries(id, name, number) {
+  const b = state.library.find(x => x.id === id);
+  if (!b) return;
+  b.series = String(name || "").trim();
+  const n = parseInt(number, 10);
+  b.seriesNumber = Number.isFinite(n) && n > 0 ? n : null;
+  saveLibrary();
+  // Deliberately no render(): these are text inputs, and moving from the name field to the
+  // number field blurs the first, which commits here. Re-rendering at that moment would
+  // replace the very input the user is tapping into — on a phone the keyboard closes and the
+  // entry is lost. The shelf re-sorts on the next render, which closing the detail view does.
+}
 function removeBook(id) {
   state.library = state.library.filter(b => b.id !== id);
   saveLibrary();
   render();
 }
 
+// ---------- Shelf ordering ----------
+// Shelves are sorted like a real bookshelf: by the author's surname, then with each series
+// kept together in reading order. Sorting happens in shelves() on a derived copy — the stored
+// order of state.library is never touched, so export/import and sync are unaffected.
+
+// Trailing honorifics to ignore when finding a surname ("Martin Luther King Jr." -> King).
+// Deliberately excludes bare "I"/"V" — too likely to be a real name fragment.
+const NAME_SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv", "phd", "md", "esq"]);
+// Surname particles that belong with the surname ("Ursula K. Le Guin" -> Le Guin).
+const NAME_PARTICLES = new Set(["de", "del", "della", "der", "di", "du", "da", "dos", "la", "le",
+  "van", "von", "ten", "ter", "bin", "al", "mac", "mc", "st"]);
+
+// "Book Three of ..." is as common as "Book 3 of ..." in Google's titles.
+const NUMBER_WORDS = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17,
+  eighteen: 18, nineteen: 19, twenty: 20,
+};
+function toNumber(tok) {
+  const t = String(tok ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (/^\d{1,3}$/.test(t)) return parseInt(t, 10);
+  return NUMBER_WORDS[t] ?? null;
+}
+
+// Sorts on the surname, falling back to the whole string for mononyms. Unknown authors sort last.
+function authorSortKey(authors) {
+  const primary = String(authors || "").split(",")[0].trim();
+  if (!primary) return "￿";
+  const parts = primary.split(/\s+/).filter(Boolean);
+  while (parts.length > 1 && NAME_SUFFIXES.has(parts[parts.length - 1].toLowerCase().replace(/[.,]/g, ""))) {
+    parts.pop();
+  }
+  if (parts.length === 1) return parts[0].toLowerCase();
+  let i = parts.length - 1;
+  while (i > 0 && NAME_PARTICLES.has(parts[i - 1].toLowerCase().replace(/\.$/, ""))) i--;
+  return `${parts.slice(i).join(" ")} ${parts.slice(0, i).join(" ")}`.trim().toLowerCase();
+}
+
+// Library-style: a leading article doesn't count for alphabetisation.
+function titleSortKey(t) {
+  return String(t || "").toLowerCase().replace(/^(the|an|a)\s+/, "").trim();
+}
+
+function cleanSeriesName(name) {
+  return String(name || "")
+    .replace(/[\s,:;.–—-]+$/, "")
+    .replace(/\s+(series|saga|trilogy|cycle|sequence|chronicles?|novels?|books?)$/i, "")
+    .trim();
+}
+
+// Best-effort series detection from the metadata we already store, so it works on books
+// that were added long before this feature existed. Patterns are deliberately conservative:
+// a wrong grouping is worse than no grouping, and anything it misses can be typed in by hand.
+function detectSeries(book) {
+  const hay = [book.title || "", book.subtitle || ""];
+
+  // "Mistborn: The Final Empire (Mistborn, Book 1)" / "(Discworld #5)" / "(Dune Chronicles, Vol. 2)"
+  for (const s of hay) {
+    const m = s.match(/\(([^()]{2,60}?)[,;]?\s*(?:#|book|bk\.?|vol(?:ume)?\.?|part|no\.?)\s*(\d{1,3}|[a-z]+)\s*\)/i);
+    const n = m && toNumber(m[2]);
+    const name = m && cleanSeriesName(m[1]);
+    if (name && n) return { name, number: n };
+  }
+  // "Book Two of the Stormlight Archive" — the article is captured, not dropped, so the name
+  // matches the spelling the other patterns produce. (Grouping is article-insensitive anyway.)
+  for (const s of hay) {
+    const m = s.match(/\b(?:book|volume|vol\.?|part)\s+(\d{1,3}|[a-z]+)\s+(?:of|in)\s+((?:the\s+)?.{2,60}?)\s*$/i);
+    const n = m && toNumber(m[1]);
+    const name = m && cleanSeriesName(m[2]);
+    if (name && n) return { name, number: n };
+  }
+  // "The Wheel of Time, Book 3" — usually the subtitle.
+  for (const s of hay) {
+    const m = s.match(/^(.{2,60}?)[,:]\s*(?:book|volume|vol\.?|part|#)\s*(\d{1,3}|[a-z]+)\s*$/i);
+    const n = m && toNumber(m[2]);
+    const name = m && cleanSeriesName(m[1]);
+    if (name && n) return { name, number: n };
+  }
+  // Named but unnumbered: "A Discworld Novel".
+  for (const s of hay) {
+    const m = s.match(/\ban?\s+(.{2,40}?)\s+novel\b/i);
+    const name = m && cleanSeriesName(m[1]);
+    if (name) return { name, number: null };
+  }
+  return null;
+}
+
+// A `series` key present on the book (including "") is a manual override and always wins;
+// absent means "nothing typed yet, use detection".
+function seriesOf(book) {
+  if (book.series !== undefined && book.series !== null) {
+    const name = String(book.series).trim();
+    if (!name) return null;
+    const n = book.seriesNumber;
+    return { name, number: Number.isFinite(n) ? n : null };
+  }
+  return detectSeries(book);
+}
+
+function pubYear(b) {
+  const m = String(b.publishedDate || "").match(/\d{4}/);
+  return m ? parseInt(m[0], 10) : Infinity;
+}
+
+function compareBooks(a, b) {
+  const ak = authorSortKey(a.authors), bk = authorSortKey(b.authors);
+  if (ak !== bk) return ak.localeCompare(bk);
+
+  // Within one author, a series sorts under the series name and a standalone under its own
+  // title, so series blocks and one-offs interleave alphabetically rather than segregating.
+  const as = seriesOf(a), bs = seriesOf(b);
+  const ag = titleSortKey(as ? as.name : a.title);
+  const bg = titleSortKey(bs ? bs.name : b.title);
+  if (ag !== bg) return ag.localeCompare(bg);
+
+  const an = as && as.number, bn = bs && bs.number;
+  if (an != null && bn != null && an !== bn) return an - bn;
+  if (an != null && bn == null) return -1;
+  if (an == null && bn != null) return 1;
+
+  // No series number to go on: publication order is a decent proxy for reading order.
+  const ay = pubYear(a), by = pubYear(b);
+  if (ay !== by) return ay - by;
+  return titleSortKey(a.title).localeCompare(titleSortKey(b.title));
+}
+
 // ---------- Rendering ----------
 function shelves() {
-  return {
-    "to-read": state.library.filter(b => b.status === "to-read"),
-    reading: state.library.filter(b => b.status === "reading"),
-    read: state.library.filter(b => b.status === "read"),
-  };
+  // filter() already returns a fresh array, so sorting here never reorders state.library.
+  const shelf = status => state.library.filter(b => b.status === status).sort(compareBooks);
+  return { "to-read": shelf("to-read"), reading: shelf("reading"), read: shelf("read") };
 }
 
 // Derives everything the Stats view shows from state.library on demand — no separate persisted
@@ -482,7 +625,7 @@ function renderAddTab() {
       <div class="search-box">
         <div class="search-input-wrap">
           ${ICON.search}
-          <input id="search-input" placeholder="Title, author, or ISBN" value="${esc(state.query)}" />
+          <input id="search-input" placeholder="Title, author, or ISBN" value="${escAttr(state.query)}" />
         </div>
         <button class="icon-btn" id="scan-btn" aria-label="Scan barcode">${ICON.camera}</button>
       </div>
@@ -569,8 +712,8 @@ function renderDetail() {
         </button>`).join("");
 
   const ownRow = isLibraryBook
-    ? `<div class="own-row">
-        <span class="own-row-label">Where is it?</span>
+    ? `<div class="detail-field">
+        <span class="detail-field-label">Where is it?</span>
         <div class="pill-row">${Object.entries(OWNERSHIP_META).map(([key, meta]) => `
           <button class="pill own-pill ${book.owned === key ? "active" : ""}"
                   style="${book.owned === key ? `--own-color:${meta.color}` : ""}"
@@ -578,6 +721,24 @@ function renderDetail() {
                   aria-pressed="${book.owned === key}">
             ${meta.icon} ${meta.label}
           </button>`).join("")}</div>
+      </div>`
+    : "";
+
+  const ser = isLibraryBook ? seriesOf(book) : null;
+  const detected = isLibraryBook && book.series === undefined && ser;
+  const seriesBlock = isLibraryBook
+    ? `<div class="detail-field">
+        <span class="detail-field-label">Series</span>
+        <div class="series-row">
+          <input class="series-input" id="series-name" value="${escAttr(ser ? ser.name : "")}"
+                 placeholder="Not in a series" aria-label="Series name" />
+          <input class="series-input series-num" id="series-num" type="number" min="1" step="1"
+                 inputmode="numeric" value="${ser && ser.number != null ? ser.number : ""}"
+                 placeholder="#" aria-label="Number in series" />
+        </div>
+        <span class="series-hint">${detected
+          ? "Detected from the title — correct it here if it's wrong."
+          : "Books in a series sort together, in number order."}</span>
       </div>`
     : "";
 
@@ -600,6 +761,7 @@ function renderDetail() {
         ${desc}
         <div class="pill-row">${actionPills}</div>
         ${ownRow}
+        ${seriesBlock}
         ${link}
       </div>
     </div>
@@ -780,6 +942,14 @@ function attachEvents() {
   document.querySelectorAll("[data-owned]").forEach(el => {
     el.addEventListener("click", () => setOwnership(el.dataset.owned, el.dataset.mark));
   });
+  const seriesName = document.getElementById("series-name");
+  const seriesNum = document.getElementById("series-num");
+  if (seriesName && seriesNum) {
+    // "change" (not "input") so a save + re-render only happens once the field is committed.
+    const saveSeries = () => setSeries(state.detailId, seriesName.value, seriesNum.value);
+    seriesName.addEventListener("change", saveSeries);
+    seriesNum.addEventListener("change", saveSeries);
+  }
   document.querySelectorAll("[data-remove]").forEach(el => {
     el.addEventListener("click", () => removeBook(el.dataset.remove));
   });

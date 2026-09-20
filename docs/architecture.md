@@ -36,6 +36,8 @@ A "book" object, as stored in `state.library` / `localStorage`:
   addedAt: number,                // Date.now() at insertion
   finishedAt: number|undefined,    // Date.now() when status last became "read" — see Reading stats below
   owned: "own"|"library"|"buy"|null, // where the physical copy is — see Ownership marks below
+  series: string|undefined,          // manual override; "" means "explicitly not a series"
+  seriesNumber: number|null,         // position within `series` — see Shelf ordering below
 }
 ```
 
@@ -201,6 +203,57 @@ already implicit for Scanner/Detail/Settings.
 
 See "Data model" above for `finishedAt` and decisions.md for why it falls back to `addedAt` rather than
 triggering a migration for books marked "read" before this feature existed.
+
+## Shelf ordering
+
+All three shelves are sorted like a physical bookshelf rather than by insertion order. `shelves()`
+sorts with `compareBooks()`; `filter()` already returns a new array, so `state.library`'s stored order is
+never touched and export/import/sync are unaffected.
+
+Sort order, in priority:
+
+1. **Author surname.** `authorSortKey()` takes the first of the comma-joined authors and moves the
+   surname to the front. It drops trailing honorifics (`Jr.`, `III`) and keeps surname particles attached
+   (`Ursula K. Le Guin` → `le guin ursula k.`). Mononyms (`Homer`) sort as-is; unknown authors sort last
+   via a `\uffff` key.
+2. **Group.** A book in a series groups under the series name; a standalone groups under its own title.
+   So series blocks and one-offs interleave alphabetically within an author instead of segregating.
+   `titleSortKey()` strips a leading `the`/`a`/`an`, library-style — which also makes grouping
+   article-insensitive, so `The Wheel of Time` and `Wheel of Time` still group together.
+3. **Series number**, ascending. Numeric, so #8 precedes #13. A numbered book precedes an unnumbered one
+   in the same series.
+4. **Publication year** (`pubYear()`, first 4-digit run in `publishedDate`). A decent proxy for reading
+   order when there's no series number, since series are usually published in order. Undated sorts last.
+5. **Title**, as a final tiebreak.
+
+### Series detection
+
+`seriesOf(book)` returns the manual override when the `series` key is present (including `""`, meaning
+"explicitly not a series"), otherwise falls back to `detectSeries()`. Detection reads only `title` and
+`subtitle`, which are already stored — so it works retroactively on books added years ago, with no
+re-fetch and no migration. Google Books' own `volumeInfo.seriesInfo` is undocumented, sparsely populated,
+and gives a `seriesId` rather than a name, so it isn't used.
+
+Patterns, tried in order, deliberately conservative (a wrong grouping is worse than none):
+
+| pattern | example |
+|---|---|
+| parenthetical with a keyword | `Mistborn: The Final Empire (Mistborn, Book 1)`, `(Discworld #8)` |
+| "Book N of/in ..." | `Book Two of the Stormlight Archive` |
+| "Name, Book N" | `The Wheel of Time, Book 3` |
+| name only, unnumbered | `A Discworld Novel` |
+
+`toNumber()` accepts digits or the words one–twenty. `cleanSeriesName()` trims trailing
+`Series`/`Trilogy`/`Cycle`/etc. A parenthetical without a keyword (`(Modern Library Classics)`,
+`(A Novel)`) is ignored.
+
+### Manual fix-up
+
+The detail view has a Series name + number field (`setSeries()`). Writing either marks the book manually
+set, which wins over detection permanently. `setSeries()` deliberately does **not** call `render()`:
+moving from the name field to the number field blurs the first and commits, and re-rendering at that
+moment would replace the input being tapped into — on a phone the keyboard closes and the entry is lost.
+The shelf re-sorts on the next render, which closing the detail view triggers.
 
 ## Ownership marks
 

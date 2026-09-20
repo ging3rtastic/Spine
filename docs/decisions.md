@@ -2,6 +2,29 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Series detected from the title, not from Google's `seriesInfo`
+
+Google Books volumes sometimes carry a `volumeInfo.seriesInfo`, which looks like the obvious source for
+series order. It isn't: it's undocumented, present on only a fraction of volumes, and identifies the series
+by an opaque `seriesId` rather than a name — grouping by it would need a second API call per book, and the
+API is already geo-restricted enough that it couldn't even be probed from the dev container.
+
+More decisively, it only helps books added *after* the change. Parsing `title`/`subtitle` — which every
+book already has stored — works retroactively on a library built up over years, with no re-fetch and no
+migration. Patterns are kept conservative on the principle that a wrong grouping is worse than no
+grouping: a book wrongly filed under a series is confusing, a book left unfiled just sorts by title.
+
+The manual field exists because detection will always miss things; it's the escape hatch that makes the
+imperfect heuristic acceptable. An explicit `series` key (including `""`) always wins, so a correction is
+never re-guessed.
+
+## Sorting lives in `shelves()`, not in `state.library`
+
+Sorting the stored array would have been simpler to write, but `state.library` is what gets exported and
+pushed to Firestore, and its order is also what `addBook()`'s `unshift` assumes. Sorting the derived copy
+in `shelves()` keeps the stored order stable, so a re-sort never produces a spurious sync write or a
+diff-only-by-ordering export.
+
 ## Ownership is its own field, not a fourth shelf
 
 The ask was a way to see, while out shopping, which To Read books you already own, which are available at a

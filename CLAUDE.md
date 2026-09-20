@@ -73,6 +73,10 @@ There is no build step, package manager, or test suite. To develop:
   - Tapping a book (search result or shelf item) opens a full-screen detail view (`renderDetail()`) with
     the untruncated description and extra Google Books metadata (publisher, categories, rating, etc.) — see
     `docs/architecture.md` → "Book detail view".
+  - `shelves()` sorts all three shelves by author surname, then keeps each series together in number
+    order (`compareBooks()`), rather than insertion order. Series come from `detectSeries()` (parsed from
+    the stored title/subtitle) or a manual `series`/`seriesNumber` set in the detail view. Sorting is
+    applied to the derived copy, never to `state.library`. See `docs/architecture.md` → "Shelf ordering".
   - Each book can carry an optional ownership mark (`owned`: own / library / buy), set from a "Where is
     it?" row in the detail view and shown as a small colored badge on the shelf cover — a shopping aid,
     independent of `status`. See `docs/architecture.md` → "Ownership marks".

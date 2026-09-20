@@ -2,6 +2,24 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-20 (2)
+
+- Shelves are now sorted like a real bookshelf instead of by insertion order: by author surname, with
+  each series kept together in number order (`compareBooks()`/`authorSortKey()`/`titleSortKey()` in
+  `app.js`, applied in `shelves()` to all three shelves). Surname handling covers particles (`Le Guin`)
+  and honorifics (`Jr.`); leading articles are ignored library-style.
+- Series are auto-detected from the already-stored `title`/`subtitle` (`detectSeries()`), so it works
+  retroactively with no re-fetch or migration — plus a Series name/number field in the detail view
+  (`setSeries()`, `series`/`seriesNumber`) to correct what detection misses. Google Books' own
+  `seriesInfo` was evaluated and rejected: undocumented, sparse, and returns an id rather than a name.
+- Fixed: `setSeries()` must not `render()`, or tabbing from the series name field to the number field
+  destroys the input mid-edit (keyboard closes on mobile, entry lost).
+- Added `escAttr()` for HTML attribute values — `esc()` doesn't escape quotes, so a title or series name
+  containing `"` broke out of `value="..."`. Also applied to the existing search input's `value`.
+- Verified in Playwright: 8 author-key cases, 11 series-detection cases, full 16-book ordering
+  (numeric #8-before-#13, article stripping, manual override beating publication date, unknown author
+  last), quote round-trip, and manual entry surviving a reload. Bumped `APP_VERSION` to `12`.
+
 ## 2026-09-20
 
 - Added ownership marks: each book can be tagged "Own it" / "At library" / "Need to buy" (`owned` on the

@@ -10,7 +10,10 @@ _(none open right now)_
 ## Ideas (from README.md "Notes" section, not yet built)
 
 - Notes field per book (personal notes/quotes, distinct from Google's read-only description).
-- Sort & search within a shelf (currently insertion order only; matters more as the library grows).
+- Search/filter within a shelf. (Sorting is done — shelves are author+series ordered now. A text filter
+  is still missing and matters more as the library grows.)
+- Series detection only reads title/subtitle. If a lot of books need hand-correcting, worth revisiting
+  whether a small built-in series lookup table for common series would pay for itself.
 - Filter/highlight a shelf by ownership mark (e.g. a "show only what I need to buy" toggle on To Read).
   The badges + header count cover the glanceable case; a filter would matter once To Read is long.
 - Reading progress tracker (current page/% for "Reading" books) — proposed alongside Reading Stats but not

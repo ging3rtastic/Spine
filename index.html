@@ -127,9 +127,19 @@
   }
   .pill.active { border-color: var(--gold); background: rgba(201,162,75,0.14); color: var(--gold); }
   .pill.danger { color: var(--rust); margin-left: auto; }
-  .own-row { margin-top: 18px; }
-  .own-row-label { display: block; font-size: 11px; color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase; }
-  .own-row .pill-row { margin-top: 6px; }
+  .detail-field { margin-top: 18px; }
+  .detail-field-label { display: block; font-size: 11px; color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+  .detail-field .pill-row { margin-top: 6px; }
+  .series-row { display: flex; gap: 8px; margin-top: 6px; }
+  .series-input {
+    flex: 1; min-width: 0; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    font-family: inherit; font-size: 13px;
+  }
+  .series-input:focus { outline: none; border-color: var(--gold); }
+  .series-input::placeholder { color: var(--text-muted); opacity: 0.7; }
+  .series-num { flex: 0 0 64px; text-align: center; }
+  .series-hint { display: block; margin-top: 6px; font-size: 11px; color: var(--text-muted); opacity: 0.8; }
   .own-pill.active { color: var(--own-color); border-color: var(--own-color); background: transparent; }
 
   /* Bookshelf: fixed-height face-out book tiles wrap into rows; the wood ledge under every row is
