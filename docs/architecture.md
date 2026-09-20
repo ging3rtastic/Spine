@@ -35,6 +35,7 @@ A "book" object, as stored in `state.library` / `localStorage`:
   status: "to-read" | "reading" | "read",
   addedAt: number,                // Date.now() at insertion
   finishedAt: number|undefined,    // Date.now() when status last became "read" — see Reading stats below
+  owned: "own"|"library"|"buy"|null, // where the physical copy is — see Ownership marks below
 }
 ```
 
@@ -200,6 +201,34 @@ already implicit for Scanner/Detail/Settings.
 
 See "Data model" above for `finishedAt` and decisions.md for why it falls back to `addedAt` rather than
 triggering a migration for books marked "read" before this feature existed.
+
+## Ownership marks
+
+Orthogonal to `status`: `status` is where a book is in your *reading*, `owned` is where the physical copy
+is. Three values, defined once in `OWNERSHIP_META` in `app.js` (label, icon, color):
+
+| value     | meaning       | icon  | color     |
+|-----------|---------------|-------|-----------|
+| `"own"`   | Own it        | home  | `--sage`  |
+| `"library"` | At library  | columns | `--sky` |
+| `"buy"`   | Need to buy   | cart  | `--gold`  |
+
+Absent or `null` means "not marked yet" and renders no badge. The point is shopping: glance at the To Read
+shelf and see what to look out for in a bookstore.
+
+Two surfaces:
+- **Shelf badge** — `renderShelfItem()` wraps the cover in `.shelf-cover-wrap` and overlays a
+  `.shelf-badge` chip (22px, top-right, dark backdrop so it stays legible over light cover art; the icon
+  carries the color). Rendered on every shelf, not just To Read — the field is set per book, not per shelf.
+- **Detail view** — `renderDetail()` renders a "Where is it?" `.own-row` of `.own-pill`s below the status
+  pills, for library books only (a search result isn't on a shelf yet). Tapping the active mark clears it.
+
+`setOwnership()` writes an explicit `null` on clear rather than `delete`-ing the key, because `mergeBooks()`
+merges with `{ ...existing, ...incoming }` — a missing key would let the other device's stale value win
+instead of propagating the clear. (Firestore also rejects `undefined`.)
+
+The To Read tab's header subtitle appends `· N to buy` when any book on it is marked `"buy"`, so the
+shopping count is visible without opening anything.
 
 ## Backup (Export / Import)
 

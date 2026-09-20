@@ -2,6 +2,21 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Ownership is its own field, not a fourth shelf
+
+The ask was a way to see, while out shopping, which To Read books you already own, which are available at a
+library, and which you'd need to buy. The cheap version would have been a fourth status ("To Buy"), but
+status and ownership are independent axes — you can own a book you're currently reading, and a book you
+need to buy doesn't stop being "to read". Folding them together would have meant a book could only be in
+one of the two, and would have polluted the shelf tabs and Reading Stats with a non-reading concept.
+
+So `owned` is a separate optional field with its own vocabulary, rendered as a badge rather than a shelf.
+It's deliberately *not* required: an unmarked book shows no badge, so nothing changes for anyone who never
+touches the feature, and there's no migration for existing libraries.
+
+Badges render on all three shelves rather than To Read only. The field is per book, not per shelf, and
+hiding it elsewhere would make it look like the mark had been lost when a book moved to Reading.
+
 ## `finishedAt` falls back to `addedAt`, no migration
 
 Added `finishedAt` (stamped in `setStatus`/`addBook` whenever a book's status becomes "read") so reading

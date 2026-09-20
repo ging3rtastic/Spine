@@ -73,6 +73,9 @@ There is no build step, package manager, or test suite. To develop:
   - Tapping a book (search result or shelf item) opens a full-screen detail view (`renderDetail()`) with
     the untruncated description and extra Google Books metadata (publisher, categories, rating, etc.) — see
     `docs/architecture.md` → "Book detail view".
+  - Each book can carry an optional ownership mark (`owned`: own / library / buy), set from a "Where is
+    it?" row in the detail view and shown as a small colored badge on the shelf cover — a shopping aid,
+    independent of `status`. See `docs/architecture.md` → "Ownership marks".
   - Settings → "View reading stats" opens `renderStats()`: books read / pages / top genres / longest book,
     toggleable This Year vs. All Time, computed on demand from `state.library` via `computeStats()`. Relies
     on `finishedAt` (stamped when a book's status becomes "read") — see `docs/architecture.md` → "Reading

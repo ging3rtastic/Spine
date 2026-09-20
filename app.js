@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "10";
+const APP_VERSION = "11";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -14,6 +14,9 @@ const ICON = {
   alert: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>`,
   loader: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`,
   gear: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  home: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>`,
+  library: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10 12 3l10 7"/><path d="M5 10v11M10 10v11M14 10v11M19 10v11"/><path d="M3 21h18"/></svg>`,
+  cart: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.2"/><circle cx="18" cy="20" r="1.2"/><path d="M1.5 3H4l2.5 11.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.5L21 7H5.2"/></svg>`,
 };
 
 const SPINES = ["#8B3A3A", "#2D5A4A", "#4A5D8B", "#8B6F3A", "#5C3A8B", "#3A7D8B", "#A8553D"];
@@ -28,6 +31,14 @@ const STATUS_META = {
   reading: { label: "Reading", icon: ICON.book },
   read: { label: "Read", icon: ICON.check },
 };
+// Where a book physically is — orthogonal to which shelf it's on. Purely an aid for
+// knowing what to look out for when shopping; `null`/absent means "not marked yet".
+const OWNERSHIP_META = {
+  own: { label: "Own it", short: "Own", icon: ICON.home, color: "var(--sage)" },
+  library: { label: "At library", short: "Library", icon: ICON.library, color: "var(--sky)" },
+  buy: { label: "Need to buy", short: "Buy", icon: ICON.cart, color: "var(--gold)" },
+};
+
 const TABS = [
   { key: "add", label: "Add", icon: ICON.plus },
   { key: "to-read", label: "To Read", icon: ICON.bookmark },
@@ -329,6 +340,12 @@ function setStatus(id, status) {
   saveLibrary();
   render();
 }
+function setOwnership(id, mark) {
+  const b = state.library.find(x => x.id === id);
+  if (b) b.owned = b.owned === mark ? null : mark;
+  saveLibrary();
+  render();
+}
 function removeBook(id) {
   state.library = state.library.filter(b => b.id !== id);
   saveLibrary();
@@ -418,9 +435,13 @@ function renderShelfItem(book) {
   const cover = book.thumbnail
     ? `<img class="shelf-cover" src="${esc(book.thumbnail)}" alt="" />`
     : `<div class="shelf-cover shelf-cover-fallback" style="background:${spineColor(book.title || book.id)}">${ICON.book}</div>`;
+  const mark = OWNERSHIP_META[book.owned];
+  const badge = mark
+    ? `<span class="shelf-badge" style="color:${mark.color}" aria-hidden="true">${mark.icon}</span>`
+    : "";
   return `
-    <button class="shelf-item" data-detail="${esc(book.id)}" data-detail-source="library" aria-label="${esc(label)}">
-      ${cover}
+    <button class="shelf-item" data-detail="${esc(book.id)}" data-detail-source="library" aria-label="${esc(mark ? `${label} — ${mark.label}` : label)}">
+      <span class="shelf-cover-wrap">${cover}${badge}</span>
       <span class="shelf-item-title">${esc(book.title)}</span>
       <span class="shelf-item-author">${esc(book.authors || "Unknown author")}</span>
     </button>`;
@@ -484,8 +505,12 @@ function renderShelfTab() {
     ? renderEmpty(meta.icon, emptyText)
     : `<div class="shelf-case">${s.map(renderShelfItem).join("")}</div>`;
 
+  const count = `${s.length} book${s.length === 1 ? "" : "s"}`;
+  const toBuy = state.tab === "to-read" ? s.filter(b => b.owned === "buy").length : 0;
+  const subtitle = toBuy ? `${count} · ${toBuy} to buy` : count;
+
   return `
-    ${renderHeader(meta.label, `${s.length} book${s.length === 1 ? "" : "s"}`)}
+    ${renderHeader(meta.label, subtitle)}
     <div class="list">${body}</div>
   `;
 }
@@ -543,6 +568,19 @@ function renderDetail() {
           ${added === key ? ICON.check : ICON.plus} ${meta.label}
         </button>`).join("");
 
+  const ownRow = isLibraryBook
+    ? `<div class="own-row">
+        <span class="own-row-label">Where is it?</span>
+        <div class="pill-row">${Object.entries(OWNERSHIP_META).map(([key, meta]) => `
+          <button class="pill own-pill ${book.owned === key ? "active" : ""}"
+                  style="${book.owned === key ? `--own-color:${meta.color}` : ""}"
+                  data-owned="${esc(book.id)}" data-mark="${key}"
+                  aria-pressed="${book.owned === key}">
+            ${meta.icon} ${meta.label}
+          </button>`).join("")}</div>
+      </div>`
+    : "";
+
   const link = book.previewLink
     ? `<a class="detail-link" href="${esc(book.previewLink)}" target="_blank" rel="noopener">View on Google Books</a>`
     : "";
@@ -561,6 +599,7 @@ function renderDetail() {
         ${rating}
         ${desc}
         <div class="pill-row">${actionPills}</div>
+        ${ownRow}
         ${link}
       </div>
     </div>
@@ -737,6 +776,9 @@ function attachEvents() {
   });
   document.querySelectorAll("[data-setstatus]").forEach(el => {
     el.addEventListener("click", () => setStatus(el.dataset.setstatus, el.dataset.status));
+  });
+  document.querySelectorAll("[data-owned]").forEach(el => {
+    el.addEventListener("click", () => setOwnership(el.dataset.owned, el.dataset.mark));
   });
   document.querySelectorAll("[data-remove]").forEach(el => {
     el.addEventListener("click", () => removeBook(el.dataset.remove));

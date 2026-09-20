@@ -2,6 +2,16 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-20
+
+- Added ownership marks: each book can be tagged "Own it" / "At library" / "Need to buy" (`owned` on the
+  book object, `OWNERSHIP_META` in `app.js`), shown as a small colored symbol badge on the top-right corner
+  of its shelf cover. Set from a new "Where is it?" pill row in the book detail view; tapping the active
+  mark clears it. The To Read header also shows a `· N to buy` count. Purpose is shopping — glance at the
+  shelf and know what to look for in a store. Rides along with export/import and Firebase sync for free
+  since it's just another field on the book. Verified in Playwright (all four states render, badge count,
+  set/clear/reset round-trips through `localStorage`). Bumped `APP_VERSION` to `11`.
+
 ## 2026-08-20 (18)
 
 - Added a Reading Stats view (Settings → "View reading stats"): books read, total pages, top genres, and

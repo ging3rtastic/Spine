@@ -11,5 +11,7 @@ _(none open right now)_
 
 - Notes field per book (personal notes/quotes, distinct from Google's read-only description).
 - Sort & search within a shelf (currently insertion order only; matters more as the library grows).
+- Filter/highlight a shelf by ownership mark (e.g. a "show only what I need to buy" toggle on To Read).
+  The badges + header count cover the glanceable case; a filter would matter once To Read is long.
 - Reading progress tracker (current page/% for "Reading" books) — proposed alongside Reading Stats but not
   picked; would need a way to update progress and likely a small progress bar on the shelf cover.
