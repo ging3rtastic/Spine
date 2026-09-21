@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "12";
+const APP_VERSION = "13";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -580,7 +580,7 @@ function renderShelfItem(book) {
     : `<div class="shelf-cover shelf-cover-fallback" style="background:${spineColor(book.title || book.id)}">${ICON.book}</div>`;
   const mark = OWNERSHIP_META[book.owned];
   const badge = mark
-    ? `<span class="shelf-badge" style="color:${mark.color}" aria-hidden="true">${mark.icon}</span>`
+    ? `<span class="shelf-badge" style="--badge:${mark.color}" aria-hidden="true">${mark.icon}</span>`
     : "";
   return `
     <button class="shelf-item" data-detail="${esc(book.id)}" data-detail-source="library" aria-label="${esc(mark ? `${label} — ${mark.label}` : label)}">

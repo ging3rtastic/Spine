@@ -24,8 +24,8 @@
     --rust: #A8553D;
     --text: #F1EAD9;
     --text-muted: #93A399;
-    --sage: #6FA07C;
-    --sky: #6E93BE;
+    --sage: #7BBE90;
+    --sky: #78A8DC;
     --wood: #3D2B1E;
     --wood-edge: #5A3F2A;
   }
@@ -172,16 +172,18 @@
   }
   .shelf-cover-fallback { display: flex; align-items: center; justify-content: center; color: rgba(241,234,217,0.8); }
   .shelf-cover-wrap { position: relative; display: block; width: 80px; height: 120px; flex-shrink: 0; }
-  /* Ownership mark: a glanceable chip over the cover's top-right corner. The dark backdrop keeps
-     it legible over light cover art; the icon carries the color. */
+  /* Ownership mark: a solid colored chip on the cover's top-right corner. The fill carries the
+     colour and the glyph is punched out dark, which reads at a glance over any cover art — a dark
+     chip with a thin coloured outline disappeared against dark covers. The ring in --bg separates
+     it from light covers; the heavier stroke keeps the glyph legible at this size. */
   .shelf-badge {
-    position: absolute; top: 4px; right: 4px;
-    width: 22px; height: 22px; border-radius: 50%;
+    position: absolute; top: 5px; right: 5px;
+    width: 26px; height: 26px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(12,20,17,0.82); border: 1px solid currentColor;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    background: var(--badge); color: #0E1714;
+    box-shadow: 0 0 0 2px var(--bg), 0 2px 5px rgba(0,0,0,0.55);
   }
-  .shelf-badge svg { width: 13px; height: 13px; }
+  .shelf-badge svg { width: 15px; height: 15px; stroke-width: 2.5; }
   .shelf-item-title {
     font-family: 'Fraunces', serif; font-weight: 600; font-size: 12px; color: var(--text);
     margin-top: 18px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

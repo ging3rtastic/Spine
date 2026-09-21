@@ -2,6 +2,18 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Ownership badges are filled, not outlined
+
+The badges started as a dark translucent chip with a thin coloured border and a matching coloured glyph —
+which looked tidy in isolation and was nearly invisible in use. Two compounding reasons: the chip's dark
+backdrop sat on dark cover art with almost no edge, and all of the colour was carried by a 13px glyph at
+2px stroke, which is a very small amount of ink to identify a colour from.
+
+Inverting it — solid colour fill, dark glyph punched out, ringed in the page background — fixes both: the
+fill is a large block of unambiguous colour, and the ring guarantees an edge against covers at either
+end of the lightness range. Worth remembering if a future pass is tempted by the more restrained
+outlined look: it was tried, and it failed on a real phone.
+
 ## Series detected from the title, not from Google's `seriesInfo`
 
 Google Books volumes sometimes carry a `volumeInfo.seriesInfo`, which looks like the obvious source for

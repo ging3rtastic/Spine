@@ -2,6 +2,16 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-21
+
+- Reworked the ownership badges after feedback that they were hard to see. They were a dark chip with a
+  thin coloured outline, which disappeared against dark cover art — the colour was carried by a 13px
+  2px-stroke glyph, which is very little ink. Inverted: the chip is now a solid fill in the mark's colour
+  with the glyph punched out dark, 26px instead of 22px, stroke 2.5, ringed in `--bg` so it also separates
+  from light covers. Brightened `--sage` (#6FA07C → #7BBE90) and `--sky` (#6E93BE → #78A8DC) to suit a
+  filled chip; `--gold` is used app-wide and was left alone. Compared old vs. new in Playwright over
+  white / black / mid-grey / busy / no-cover art at phone scale. Bumped `APP_VERSION` to `13`.
+
 ## 2026-09-20 (2)
 
 - Shelves are now sorted like a real bookshelf instead of by insertion order: by author surname, with

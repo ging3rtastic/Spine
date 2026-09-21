@@ -262,17 +262,19 @@ is. Three values, defined once in `OWNERSHIP_META` in `app.js` (label, icon, col
 
 | value     | meaning       | icon  | color     |
 |-----------|---------------|-------|-----------|
-| `"own"`   | Own it        | home  | `--sage`  |
-| `"library"` | At library  | columns | `--sky` |
-| `"buy"`   | Need to buy   | cart  | `--gold`  |
+| `"own"`   | Own it        | home  | `--sage` (#7BBE90) |
+| `"library"` | At library  | columns | `--sky` (#78A8DC) |
+| `"buy"`   | Need to buy   | cart  | `--gold` (#C9A24B) |
 
 Absent or `null` means "not marked yet" and renders no badge. The point is shopping: glance at the To Read
 shelf and see what to look out for in a bookstore.
 
 Two surfaces:
 - **Shelf badge** — `renderShelfItem()` wraps the cover in `.shelf-cover-wrap` and overlays a
-  `.shelf-badge` chip (22px, top-right, dark backdrop so it stays legible over light cover art; the icon
-  carries the color). Rendered on every shelf, not just To Read — the field is set per book, not per shelf.
+  `.shelf-badge` chip (26px, top-right): a **solid fill in the mark's colour with the glyph punched out
+  dark**, ringed in `--bg` and given a heavier 2.5 stroke. The colour is passed as a `--badge` custom
+  property on the span. Rendered on every shelf, not just To Read — the field is set per book, not per
+  shelf.
 - **Detail view** — `renderDetail()` renders a "Where is it?" `.own-row` of `.own-pill`s below the status
   pills, for library books only (a search result isn't on a shelf yet). Tapping the active mark clears it.
 
