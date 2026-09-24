@@ -2,6 +2,33 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Spine links out to the library catalogue; it cannot log in to one
+
+The obvious ask, once books are marked "At library", is for Spine to do what Libby does: add your
+library, log in with your card, see whether a book is on the shelf. It cannot, and this is not a
+matter of effort.
+
+Both relevant catalogues — the City of Cape Town OPAC (SirsiDynix Enterprise) and the provincial
+SLIMS/Brocade one — are server-rendered HTML that send no `Access-Control-Allow-Origin` header. A
+page served from `github.io` is a different origin, so the browser blocks the read regardless of
+whether the request succeeded or the credentials were right. The only ways round it are a proxy we
+host, which ends the no-backend design the whole project rests on, or the library publishing a
+CORS-enabled API, which will not happen. OverDrive's undocumented Thunder API has the same problem
+on its authenticated endpoints.
+
+Storing the credentials would be its own objection: the provincial service uses date of birth as the
+password, so that pair is worth more than the feature.
+
+What replaces it is a link out, the same move already made for Goodreads: the catalogue search,
+prefilled. The point that makes this more than a consolation prize is that on a phone the catalogue
+and Libby are *already signed in*, so the link lands on the real answer — holdings, availability,
+holds — without Spine ever handling a card number. What we give up is anything glanceable: no
+availability badge on the shelf, no hold status. That needs the auth we can't have.
+
+Only City of Cape Town ships. A provincial/WCLS entry was left out deliberately rather than guessed
+at: its OPAC sits behind a login and its search URL shape could not be confirmed, and a link that
+404s is worse than no link. `LIBRARY_SYSTEMS` is a table so adding one later is a few lines.
+
 ## Link out to Goodreads rather than keep chasing rating data
 
 After improving Open Library matching, coverage was still poor and the ratings that did arrive were

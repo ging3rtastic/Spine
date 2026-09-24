@@ -411,6 +411,38 @@ instead of propagating the clear. (Firestore also rejects `undefined`.)
 The To Read tab's header subtitle appends `· N to buy` when any book on it is marked `"buy"`, so the
 shopping count is visible without opening anything.
 
+## Library catalogue links ("My library")
+
+A companion to the `"library"` ownership mark, and deliberately *only* a link. Spine cannot query a
+catalogue — see `docs/decisions.md` → "Spine links out to the library catalogue; it cannot log in to one"
+for why (no CORS header on either catalogue; a proxy would end the no-backend design).
+
+`LIBRARY_SYSTEMS` in `app.js` maps a key to `{ label, host, search(query) }`. One entry today:
+
+| key     | label               | catalogue                                                    |
+|---------|---------------------|--------------------------------------------------------------|
+| `"cct"` | City of Cape Town   | `opac.capetown.gov.za` (SirsiDynix Enterprise, `?qu=` search) |
+
+`state.librarySystem` holds the chosen key, persisted to `localStorage` under `spine.librarySystem`. It
+defaults to `"cct"`, and "off" is stored **explicitly** rather than by removing the key — an absent key
+means "never chosen" and correctly falls back to the default, so a removed key would silently turn the
+feature back on at the next load. `librarySystem()` resolves the key to an entry, returning `null` for
+`"off"` or anything unrecognised; `renderLibraryLink()` returns `""` in that case, which is how the whole
+feature disappears without any call site needing to check.
+
+`libraryQuery()` prefers the ISBN: `book.id` *is* the ISBN-13 or ISBN-10 whenever Google supplied one (see
+`lookupBooks()`), tested with the same `isIsbnId()` the rating backfill uses. Books that fell back to a
+Google volume id search by title + author instead, since a volume id means nothing to a library.
+
+Two surfaces, both mirroring where the Goodreads link already sits:
+- **Detail view** — a `.title-link` next to the title, before the Goodreads one.
+- **Search card** — a `.pill pill-icon` in the pill row (the card body is a `<button>`, so a nested `<a>`
+  would be invalid markup).
+
+Because two `.title-link`s can now sit side by side, the `::after` touch-target expansion is **44px tall
+but only as wide as the glyph plus its gap**. At the original 44px square the two hit areas overlapped by
+~10px and the later link in DOM order took taps meant for the first.
+
 ## Backup (Export / Import)
 
 Settings panel (gear icon in the header, `renderSettings()` in `app.js`, reuses the `.scanner-overlay`

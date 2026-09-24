@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "19";
+const APP_VERSION = "20";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -65,6 +65,8 @@ const state = {
   syncCodeInput: "",
   statsOpen: false,
   statsScope: "year", // "year" | "all"
+  // "off" is stored explicitly: an absent key means "never chosen", which still gets the default.
+  librarySystem: localStorage.getItem("spine.librarySystem") || "cct",
 };
 
 function loadLibrary() {
@@ -301,6 +303,44 @@ function renderGoodreadsLink(book, cls) {
   return `<a class="${cls}" href="${escAttr(goodreadsSearchUrl(book))}" target="_blank"
     rel="noopener noreferrer" title="Look up reviews on Google"
     aria-label="${escAttr(`Look up reviews for ${book.title} on Google`)}">${ICON.external}</a>`;
+}
+
+// Spine cannot query a library catalogue directly, and no amount of client code changes that: the
+// catalogues are server-rendered HTML with no CORS header, so the browser refuses to let a page
+// served from another origin read the response — logged in or not. Linking out is the honest
+// version, and it is also the better one on a phone, where the catalogue is already signed in.
+// See docs/decisions.md.
+const LIBRARY_SYSTEMS = {
+  cct: {
+    label: "City of Cape Town",
+    host: "opac.capetown.gov.za",
+    // SirsiDynix Enterprise: `qu` is the single free-text query box, and matches a bare ISBN.
+    search: q => `https://opac.capetown.gov.za/client/en_US/a/search/results?qu=${encodeURIComponent(q)}`,
+  },
+};
+
+function librarySystem() {
+  return LIBRARY_SYSTEMS[state.librarySystem] || null;
+}
+
+// An ISBN is an exact hit. Books Google gave us no ISBN for keep its own volume id instead, which
+// means nothing to a library, so those fall back to a title+author search.
+function libraryQuery(book) {
+  return isIsbnId(book.id) ? book.id : [book.title, book.authors].filter(Boolean).join(" ");
+}
+
+function renderLibraryLink(book, cls) {
+  const sys = librarySystem();
+  if (!sys) return "";
+  return `<a class="${cls}" href="${escAttr(sys.search(libraryQuery(book)))}" target="_blank"
+    rel="noopener noreferrer" title="${escAttr(`Look for this at ${sys.label}`)}"
+    aria-label="${escAttr(`Look for ${book.title} at ${sys.label}`)}">${ICON.library}</a>`;
+}
+
+function setLibrarySystem(key) {
+  state.librarySystem = LIBRARY_SYSTEMS[key] ? key : "off";
+  localStorage.setItem("spine.librarySystem", state.librarySystem);
+  render();
 }
 
 function esc(s) {
@@ -875,7 +915,7 @@ function renderResultCard(r) {
           ${desc}
         </div>
       </button>
-      <div class="pill-row">${pills}${renderGoodreadsLink(r, "pill pill-icon")}</div>
+      <div class="pill-row">${pills}${renderLibraryLink(r, "pill pill-icon")}${renderGoodreadsLink(r, "pill pill-icon")}</div>
     </div>`;
 }
 
@@ -1065,7 +1105,7 @@ function renderDetail() {
       </div>
       <div class="detail-body">
         ${cover}
-        <h2 class="detail-title">${esc(book.title)}${renderGoodreadsLink(book, "title-link")}</h2>
+        <h2 class="detail-title">${esc(book.title)}${renderLibraryLink(book, "title-link")}${renderGoodreadsLink(book, "title-link")}</h2>
         ${book.subtitle ? `<p class="detail-subtitle">${esc(book.subtitle)}</p>` : ""}
         <p class="detail-author">${esc(book.authors || "Unknown author")}</p>
         ${metaRows.length ? `<p class="detail-meta">${esc(metaRows.join(" · "))}</p>` : ""}
@@ -1142,6 +1182,22 @@ function renderRatingsSection() {
     </button>`;
 }
 
+function renderLibrarySection() {
+  const sys = librarySystem();
+  const options = Object.entries(LIBRARY_SYSTEMS).map(([key, meta]) => `
+    <button class="pill ${state.librarySystem === key ? "active" : ""}" data-libsys="${key}"
+            aria-pressed="${state.librarySystem === key}">${ICON.library} ${esc(meta.label)}</button>`).join("");
+  return `
+    <p class="settings-hint">
+      Puts a link on every book that searches your library's catalogue for it \u2014 by ISBN where there
+      is one, otherwise by title and author.
+      ${sys ? `<br><span class="settings-subhint">Opens ${esc(sys.host)} in a new tab.</span>` : ""}
+    </p>
+    <div class="pill-row">${options}
+      <button class="pill ${sys ? "" : "active"}" data-libsys="off" aria-pressed="${!sys}">Off</button>
+    </div>`;
+}
+
 function renderSettings() {
   if (!state.settingsOpen) return "";
   return `
@@ -1164,6 +1220,10 @@ function renderSettings() {
             <button class="secondary-btn" id="import-btn">Import library</button>
             <input type="file" id="import-file" accept="application/json" style="display:none" />
           </div>
+        </div>
+        <div class="settings-section">
+          <h3>My library</h3>
+          ${renderLibrarySection()}
         </div>
         <div class="settings-section">
           <h3>Ratings</h3>
@@ -1315,6 +1375,10 @@ function attachEvents() {
 
   const versionTag = document.querySelector(".version-tag");
   if (versionTag) versionTag.addEventListener("click", forceRefresh);
+
+  document.querySelectorAll("[data-libsys]").forEach(el => {
+    el.addEventListener("click", () => setLibrarySystem(el.dataset.libsys));
+  });
 
   const ratingsCheckBtn = document.getElementById("ratings-check-btn");
   if (ratingsCheckBtn) ratingsCheckBtn.addEventListener("click", () => backfillRatings({ manual: true }));

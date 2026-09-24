@@ -9,6 +9,12 @@ _(none open right now)_
 
 ## Ideas (from README.md "Notes" section, not yet built)
 
+- Western Cape Provincial Library (WCLS) as a second entry in `LIBRARY_SYSTEMS`. Left out because its
+  SLIMS/Brocade catalogue sits behind a login and the search URL shape couldn't be confirmed — needs
+  someone with a provincial card to capture a real search URL, then it's a few lines.
+- A Libby/OverDrive link beside the catalogue one, for the ebook rather than the shelf copy. City of
+  Cape Town surfaces OverDrive titles inside its own OPAC (an `rm=OVERDRIVE0...` scope) rather than at a
+  separate `*.overdrive.com` site, so the URL shape needs confirming before shipping it.
 - Notes field per book (personal notes/quotes, distinct from Google's read-only description).
 - Search/filter within a shelf. (Sorting is done — shelves are author+series ordered now. A text filter
   is still missing and matters more as the library grows.)

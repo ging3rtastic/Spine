@@ -2,6 +2,20 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-24 (7)
+
+- Added "My library": with a library system chosen in Settings, every book gets a small library-building
+  link (next to the title in the detail view, in the search card's pill row) that opens that library's
+  catalogue searched for the book. City of Cape Town (`opac.capetown.gov.za`) is the only system for now
+  and is the default; "Off" hides the links.
+- Searches by ISBN where the book has one — `book.id` is the ISBN whenever Google supplied it — and falls
+  back to title + author otherwise, since a Google volume id means nothing to a library.
+- `.title-link::after` no longer expands to 44px *wide*. Two of these links now sit side by side, and two
+  44px-wide hit areas overlapped, so the later one in DOM order swallowed taps meant for the first. Width
+  is now the glyph plus its gap; the 44px height is kept.
+- Verified in Playwright: both title links render with the right hrefs, their touch targets no longer
+  overlap, the Settings picker toggles, and "Off" persists across a reload. Bumped `APP_VERSION` to `20`.
+
 ## 2026-09-24 (6)
 
 - Added an outward-arrow link next to the book title (detail view) and in the search result pill row

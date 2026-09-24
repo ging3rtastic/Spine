@@ -254,11 +254,14 @@
     background: var(--surface-alt); border: 1px solid var(--border);
   }
   /* The glyph stays small next to the title, but a 27px box is a poor thumb target.
-     This expands the touch area to ~44px without affecting layout. */
+     This expands the touch area without affecting layout. Height gets the full 44px; width is
+     held to the glyph plus its gap, because two of these can sit side by side (catalogue +
+     reviews) and a 44px-wide box would overlap its neighbour and swallow its taps. */
   .title-link::after {
     content: ""; position: absolute; top: 50%; left: 50%;
-    width: 44px; height: 44px; transform: translate(-50%, -50%);
+    width: calc(100% + 8px); height: 44px; transform: translate(-50%, -50%);
   }
+  .title-link + .title-link { margin-left: 10px; }
   .title-link:active { color: var(--gold); }
   .pill-icon { display: inline-flex; align-items: center; padding: 7px 10px; text-decoration: none; }
 
