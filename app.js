@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "14";
+const APP_VERSION = "15";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -427,6 +427,21 @@ const RATING_SAVE_EVERY = 5;        // surface stars as they arrive rather than 
 
 let ratingBackfillRunning = false;
 
+// A background job that fails silently is undiagnosable on a phone, where there are no dev
+// tools. Every run records its outcome here and the Settings panel shows it, so "no stars
+// appeared" can be told apart from "the request was blocked" without a debugger.
+const ratingStatus = { running: false, lastError: null, lastOk: null, found: 0, asked: 0 };
+
+function ratingCounts() {
+  const lib = state.library;
+  return {
+    total: lib.length,
+    rated: lib.filter(b => ratingOf(b)).length,
+    pending: lib.filter(needsRatingLookup).length,
+    unsupported: lib.filter(b => !ratingOf(b) && !isIsbnId(b.id)).length,
+  };
+}
+
 // Only an ISBN can be looked up this way; a Google volume id can't, so it's left alone.
 function isIsbnId(id) {
   return /^(?:\d{9}[\dXx]|\d{13})$/.test(String(id || ""));
@@ -450,10 +465,18 @@ async function fetchOpenLibraryRating(isbn) {
   return { value: Number.isFinite(value) && value > 0 ? value : null, count };
 }
 
-async function backfillRatings() {
+async function backfillRatings(opts = {}) {
   if (ratingBackfillRunning) return;
-  if (navigator.onLine === false) return;
+  if (navigator.onLine === false) {
+    if (opts.manual) { ratingStatus.lastError = "Device is offline"; render(); }
+    return;
+  }
   ratingBackfillRunning = true;
+  ratingStatus.running = true;
+  ratingStatus.lastError = null;
+  ratingStatus.found = 0;
+  ratingStatus.asked = 0;
+  if (opts.manual) render();
 
   // Work from a snapshot of ids and re-resolve each book, since the library can change
   // (a sync snapshot, an add, a remove) during the awaits.
@@ -472,21 +495,27 @@ async function backfillRatings() {
         // Offline, CORS, rate limit, outage: leave the remaining books unmarked so a later
         // session retries, and stop rather than hammering an API that is evidently unhappy.
         console.warn("Rating backfill stopped:", e.message);
+        ratingStatus.lastError = e.message;
         break;
       }
+      ratingStatus.asked++;
       // Mark it checked even when Open Library has no rating, so it isn't asked again.
       book.ratingChecked = true;
       if (r.value) {
         book.averageRating = r.value;
         book.ratingsCount = r.count;
         book.ratingSource = "openlibrary";
+        ratingStatus.found++;
       }
       if (++pending >= RATING_SAVE_EVERY) flush();
       await new Promise(done => setTimeout(done, RATING_LOOKUP_GAP_MS));
     }
   } finally {
     ratingBackfillRunning = false;
+    ratingStatus.running = false;
+    if (!ratingStatus.lastError) ratingStatus.lastOk = Date.now();
     flush();
+    render();
   }
 }
 
@@ -919,6 +948,32 @@ function renderSyncSection() {
   `;
 }
 
+function renderRatingsSection() {
+  const c = ratingCounts();
+  let line;
+  if (ratingStatus.running) {
+    line = `Checking Open Library\u2026`;
+  } else if (ratingStatus.lastError) {
+    line = `Last check failed: ${esc(ratingStatus.lastError)}`;
+  } else if (ratingStatus.asked) {
+    line = `Checked ${ratingStatus.asked} book${ratingStatus.asked === 1 ? "" : "s"}, found ${ratingStatus.found} rating${ratingStatus.found === 1 ? "" : "s"}.`;
+  } else if (c.pending) {
+    line = `${c.pending} book${c.pending === 1 ? "" : "s"} still to check.`;
+  } else {
+    line = `Nothing left to check.`;
+  }
+
+  return `
+    <p class="settings-hint">
+      ${c.rated} of ${c.total} book${c.total === 1 ? "" : "s"} have a rating.
+      ${c.unsupported ? `${c.unsupported} can't be looked up (no ISBN).` : ""}
+    </p>
+    <p class="settings-hint ${ratingStatus.lastError ? "settings-hint-error" : ""}">${line}</p>
+    <button class="secondary-btn" id="ratings-check-btn" ${ratingStatus.running ? "disabled" : ""}>
+      ${ratingStatus.running ? "Checking\u2026" : "Check for ratings now"}
+    </button>`;
+}
+
 function renderSettings() {
   if (!state.settingsOpen) return "";
   return `
@@ -941,6 +996,10 @@ function renderSettings() {
             <button class="secondary-btn" id="import-btn">Import library</button>
             <input type="file" id="import-file" accept="application/json" style="display:none" />
           </div>
+        </div>
+        <div class="settings-section">
+          <h3>Ratings</h3>
+          ${renderRatingsSection()}
         </div>
         <div class="settings-section">
           <h3>Sync across devices</h3>
@@ -1088,6 +1147,9 @@ function attachEvents() {
 
   const versionTag = document.querySelector(".version-tag");
   if (versionTag) versionTag.addEventListener("click", forceRefresh);
+
+  const ratingsCheckBtn = document.getElementById("ratings-check-btn");
+  if (ratingsCheckBtn) ratingsCheckBtn.addEventListener("click", () => backfillRatings({ manual: true }));
 
   const settingsBtn = document.getElementById("settings-btn");
   if (settingsBtn) settingsBtn.addEventListener("click", () => { state.settingsOpen = true; render(); });

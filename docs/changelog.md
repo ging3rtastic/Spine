@@ -2,6 +2,19 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-24 (2)
+
+- Added Settings → **Ratings**: how many books have a rating, how many can't be looked up (no ISBN),
+  the last backfill result, and a "Check for ratings now" button (`ratingStatus`,
+  `renderRatingsSection()`, `ratingCounts()` in `app.js`). The backfill previously failed silently,
+  which is undiagnosable on a phone — the error text now distinguishes CORS/network ("Failed to
+  fetch") from a server refusal ("HTTP 403") from offline.
+- Fixed `.settings-hint-error` being declared *before* `.settings-hint`: same specificity, so the
+  later rule won and the error line rendered muted instead of rust. Verified by reading computed
+  colour, not by eye.
+- Verified in Playwright across working / blocked / rate-limited / offline, plus the manual button.
+  Bumped `APP_VERSION` to `15`.
+
 ## 2026-09-24
 
 - Community ratings now show on the shelf (`★ 4.5` under the caption) and on search result cards, not

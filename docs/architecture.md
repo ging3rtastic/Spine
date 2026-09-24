@@ -246,6 +246,24 @@ Rules that keep it cheap and polite:
 
 Kicked off 2s after boot, and 1s after a cloud snapshot merge or an import.
 
+### Diagnosing it
+
+A background job that fails silently is undiagnosable on a phone, so Settings → **Ratings** shows
+what the backfill is actually doing: how many books have a rating, how many can't be looked up (no
+ISBN), and the last run's outcome — held in the `ratingStatus` module object and rendered by
+`renderRatingsSection()`. A **Check for ratings now** button runs `backfillRatings({ manual: true })`
+on demand instead of waiting for the boot timer.
+
+The error text is the diagnosis, and the distinction matters:
+
+| shown | means |
+|---|---|
+| `Checked N books, found M ratings` | working |
+| `Last check failed: Failed to fetch` | CORS or the network — the request never completed |
+| `Last check failed: HTTP 403` / `HTTP 429` | reached Open Library, which refused — rate limit or block |
+| `Last check failed: Device is offline` | `navigator.onLine` is false |
+| `N books still to check` | not run yet this session |
+
 **Unverified from the dev container:** `openlibrary.org` is denied by the sandbox network policy, so
 the response shape above is coded from the documented API and exercised against mocked responses
 (happy path, 503, network failure), not against the live service. If the live shape differs the

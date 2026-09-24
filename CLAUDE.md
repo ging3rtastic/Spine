@@ -79,7 +79,8 @@ There is no build step, package manager, or test suite. To develop:
     applied to the derived copy, never to `state.library`. See `docs/architecture.md` → "Shelf ordering".
   - Community ratings show on the shelf caption, search results and the detail view (`ratingOf()` /
     `starGlyphs()`). `backfillRatings()` tops up books Google has no rating for from Open Library, once
-    per book, in the background. See `docs/architecture.md` → "Ratings".
+    per book, in the background. Settings → "Ratings" reports what the backfill is doing and why it
+    failed, since it is otherwise invisible on a phone. See `docs/architecture.md` → "Ratings".
   - Each book can carry an optional ownership mark (`owned`: own / library / buy), set from a "Where is
     it?" row in the detail view and shown as a small colored badge on the shelf cover — a shopping aid,
     independent of `status`. See `docs/architecture.md` → "Ownership marks".
