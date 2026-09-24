@@ -2,6 +2,19 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-24 (4)
+
+- Search results (and therefore barcode scans, which hand off to `runSearch`) now get the Open Library
+  fallback too, via `enrichResultsWithRatings()`. Previously only books already on a shelf were topped
+  up, so a book you searched or scanned showed no rating at the one moment it matters — deciding
+  whether to add it. Results paint immediately and ratings fill in behind them.
+- Prefers a shelved copy, then a session `ratingCache`, then the network 3 at a time. `searchSeq`
+  stops an abandoned search's slow lookup overwriting newer results. Added an 8s timeout to
+  `fetchOpenLibraryRating()`.
+- Verified in Playwright: enrichment with Google-partial results, Open Library 503, network blocked,
+  reuse of a shelved rating, cache hit on a repeat search (0 extra requests, measured), and the
+  stale-search guard (slow first search cannot overwrite the second). Bumped `APP_VERSION` to `17`.
+
 ## 2026-09-24 (3)
 
 - Settings → Ratings now splits rated books by provenance ("N from Open Library"), shown even at zero.

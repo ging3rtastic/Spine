@@ -246,6 +246,29 @@ Rules that keep it cheap and polite:
 
 Kicked off 2s after boot, and 1s after a cloud snapshot merge or an import.
 
+### Search results
+
+Google has dropped ratings for most volumes, so a search result usually arrives with none — which is
+exactly when a rating is most useful, at the moment of deciding whether to add the book.
+`enrichResultsWithRatings()` fills them in behind the results (`runSearch` kicks it off without
+awaiting, so results paint immediately). This covers barcode scanning too, since the scanner hands
+off to `runSearch`.
+
+Order of preference, cheapest first:
+
+1. a copy already on a shelf with a rating — free,
+2. `ratingCache`, a session-lifetime `Map` of ISBN → result, so repeating a search or re-scanning the
+   same book costs nothing,
+3. the network, `RESULT_RATING_CONCURRENCY` (3) at a time so ten results don't take ten round trips.
+
+`searchSeq` guards against a slow lookup from an abandoned search overwriting newer results: each
+search takes a sequence number and enrichment bails if it no longer matches. A definitively-answered
+result gets `ratingChecked`, which rides into the library on add so the shelf backfill doesn't ask
+again. A failed lookup is *not* cached — it may be transient.
+
+`fetchOpenLibraryRating()` aborts after `RATING_TIMEOUT_MS` (8s); without it a hung request stalls
+the whole batch behind it.
+
 ### Diagnosing it
 
 A background job that fails silently is undiagnosable on a phone, so Settings → **Ratings** shows

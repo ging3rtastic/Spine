@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "16";
+const APP_VERSION = "17";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -306,6 +306,7 @@ function truncate(s, n) {
 // ---------- Actions ----------
 async function runSearch(q) {
   if (!q.trim()) return;
+  const seq = ++searchSeq;
   state.searching = true;
   state.searchError = null;
   state.results = [];
@@ -319,6 +320,8 @@ async function runSearch(q) {
   } finally {
     state.searching = false;
     render();
+    // Deliberately not awaited: results are on screen already, stars fill in behind them.
+    if (state.results.length) enrichResultsWithRatings(seq);
   }
 }
 
@@ -424,6 +427,14 @@ const OPEN_LIBRARY_SEARCH = "https://openlibrary.org/search.json";
 const RATING_LOOKUP_GAP_MS = 500;   // be a polite client of a free community API
 const RATING_LOOKUP_PER_RUN = 40;   // a big library finishes over a few sessions, not one burst
 const RATING_SAVE_EVERY = 5;        // surface stars as they arrive rather than all at the end
+const RATING_TIMEOUT_MS = 8000;
+const RESULT_RATING_CONCURRENCY = 3; // a search returns up to 10; don't do them one at a time
+
+// Ratings looked up this session, keyed by ISBN, so repeating a search (or scanning the same
+// book twice) costs nothing. A cached entry of {value:null} means "asked, nobody has rated it".
+const ratingCache = new Map();
+// Guards against a slow lookup from an abandoned search overwriting newer results.
+let searchSeq = 0;
 
 let ratingBackfillRunning = false;
 
@@ -460,7 +471,17 @@ function needsRatingLookup(b) {
 async function fetchOpenLibraryRating(isbn) {
   const url = `${OPEN_LIBRARY_SEARCH}?q=isbn:${encodeURIComponent(isbn)}` +
     `&fields=ratings_average,ratings_count&limit=1`;
-  const res = await fetch(url);
+  // Without a timeout a hung request stalls the whole batch behind it.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), RATING_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(url, { signal: ctrl.signal });
+  } catch (e) {
+    throw new Error(e.name === "AbortError" ? "Timed out" : e.message);
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   const doc = data && Array.isArray(data.docs) ? data.docs[0] : null;
@@ -469,6 +490,57 @@ async function fetchOpenLibraryRating(isbn) {
   const value = Number(doc.ratings_average ?? doc.ratings?.average);
   const count = Number(doc.ratings_count ?? doc.ratings?.count) || 0;
   return { value: Number.isFinite(value) && value > 0 ? value : null, count };
+}
+
+// Google has dropped ratings for most volumes, so a search result usually arrives with none —
+// which is exactly when a rating is useful, since that's the moment of deciding whether to add
+// the book. Results are shown immediately and ratings filled in behind them.
+async function enrichResultsWithRatings(seq) {
+  const apply = (r, hit) => {
+    if (!hit) return false;
+    r.ratingChecked = true;   // carried into the library on add, so it isn't asked twice
+    if (!hit.value) return false;
+    r.averageRating = hit.value;
+    r.ratingsCount = hit.count;
+    r.ratingSource = "openlibrary";
+    return true;
+  };
+
+  const need = state.results.filter(r => !ratingOf(r) && isIsbnId(r.id));
+  if (!need.length) return;
+
+  // Free answers first: a copy already on a shelf, or something looked up earlier this session.
+  let changed = false;
+  const remaining = [];
+  for (const r of need) {
+    const shelved = state.library.find(b => b.id === r.id);
+    const known = shelved && ratingOf(shelved);
+    if (known) {
+      r.averageRating = known.value;
+      r.ratingsCount = known.count;
+      r.ratingSource = known.source;
+      changed = true;
+    } else if (ratingCache.has(r.id)) {
+      changed = apply(r, ratingCache.get(r.id)) || changed;
+    } else {
+      remaining.push(r);
+    }
+  }
+  if (changed && seq === searchSeq) render();
+
+  for (let i = 0; i < remaining.length; i += RESULT_RATING_CONCURRENCY) {
+    if (seq !== searchSeq) return;   // a newer search has replaced these results
+    const batch = remaining.slice(i, i + RESULT_RATING_CONCURRENCY);
+    const hits = await Promise.all(batch.map(r =>
+      fetchOpenLibraryRating(r.id).catch(() => undefined)));  // undefined = transient, don't cache
+    let any = false;
+    batch.forEach((r, j) => {
+      if (hits[j] === undefined) return;
+      ratingCache.set(r.id, hits[j]);
+      any = apply(r, hits[j]) || any;
+    });
+    if (any && seq === searchSeq) render();
+  }
 }
 
 async function backfillRatings(opts = {}) {
