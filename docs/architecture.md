@@ -38,6 +38,8 @@ A "book" object, as stored in `state.library` / `localStorage`:
   owned: "own"|"library"|"buy"|null, // where the physical copy is — see Ownership marks below
   series: string|undefined,          // manual override; "" means "explicitly not a series"
   seriesNumber: number|null,         // position within `series` — see Shelf ordering below
+  ratingSource: "google"|"openlibrary"|undefined, // who supplied averageRating
+  ratingChecked: true|undefined,     // Open Library has been asked once — see Ratings below
 }
 ```
 
@@ -203,6 +205,52 @@ already implicit for Scanner/Detail/Settings.
 
 See "Data model" above for `finishedAt` and decisions.md for why it falls back to `addedAt` rather than
 triggering a migration for books marked "read" before this feature existed.
+
+## Ratings
+
+Community ratings (not the user's own — there is no personal rating feature). Shown on all three
+surfaces, each with a different amount of room:
+
+| surface | renderer | form |
+|---|---|---|
+| shelf caption (80px) | `renderRatingCompact()` | `★ 4.5` |
+| search result card | `renderRatingInline()` | `★★★★★ 4.5 (12.8k)` |
+| detail view | inline in `renderDetail()` | `★★★★☆ 4.2 · 1.3m ratings · Open Library` |
+
+`ratingOf(book)` is the single accessor; it returns `null` for a missing or non-positive value so
+every surface degrades to showing nothing. `starGlyphs()` rounds to whole stars — a `½` glyph is a
+different size and baseline from `★` and reads as a typo — and the exact value is always printed
+alongside, so nothing is lost. `formatCount()` abbreviates (1875 → `1.9k`).
+
+The shelf caption reserves the rating line's height even when empty (`.shelf-item-rating-empty`),
+so unrated books don't break row alignment.
+
+### Open Library backfill
+
+Google Books only carries a rating for some volumes, and a book already on a shelf never gains one.
+`backfillRatings()` tops up the rest from Open Library's search API, which exposes community ratings
+by ISBN:
+
+    GET https://openlibrary.org/search.json?q=isbn:<isbn>&fields=ratings_average,ratings_count&limit=1
+
+Rules that keep it cheap and polite:
+
+- Only books with no rating, not yet checked, and an **ISBN-shaped id** (`isIsbnId()`) are eligible —
+  a Google volume id can't be looked up this way and is skipped permanently.
+- `ratingChecked: true` is set even when Open Library has no rating, so each book costs **one request
+  ever**. The flag rides along through export/import and Firestore sync, so other devices don't
+  repeat the work.
+- 500ms between requests, 40 per run, saving and re-rendering every 5 so stars appear progressively.
+- Any failure (offline, CORS, rate limit, outage) stops the run and leaves the remaining books
+  *unmarked*, so a later session retries rather than permanently writing them off.
+
+Kicked off 2s after boot, and 1s after a cloud snapshot merge or an import.
+
+**Unverified from the dev container:** `openlibrary.org` is denied by the sandbox network policy, so
+the response shape above is coded from the documented API and exercised against mocked responses
+(happy path, 503, network failure), not against the live service. If the live shape differs the
+backfill simply finds nothing and logs a warning — it cannot corrupt stored data. Worth confirming
+on a real device.
 
 ## Shelf ordering
 

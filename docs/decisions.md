@@ -2,6 +2,22 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Ratings are backfilled once per book, and failures are not recorded
+
+Open Library is a free community service, so the backfill is deliberately stingy: one request per book
+for the lifetime of that book, 500ms apart, capped per run, and the result — *including "no rating
+exists"* — is written to the book so it is never asked again. The flag syncs, so a second device
+doesn't repeat the work.
+
+The asymmetry matters: a definitive answer is recorded, a *failure* is not. If the request dies from
+being offline, CORS, a rate limit or an outage, the book stays unmarked and a later session retries.
+Marking on failure would permanently write off books for a transient reason, which is the one outcome
+there is no way to recover from without a manual reset.
+
+Ratings are community ratings only. A personal 1–5 rating was considered and not built: it is a
+different feature (it wants its own UI, and it belongs in Reading Stats), and conflating the two in one
+`averageRating` field would make it impossible to tell whose opinion a star represents.
+
 ## Ownership badges are filled, not outlined
 
 The badges started as a dark translucent chip with a thin coloured border and a matching coloured glyph —

@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "13";
+const APP_VERSION = "14";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -126,6 +126,7 @@ function importLibraryFile(file) {
     state.library = merged;
     saveLibrary();
     render();
+    setTimeout(backfillRatings, 1000);
   };
   reader.readAsText(file);
 }
@@ -218,6 +219,7 @@ function subscribeToCloud(ref) {
       state.library = merged;
       saveLibrary({ skipCloudPush: true });
       render();
+      setTimeout(backfillRatings, 1000);
     }
     state.syncStatus = "synced";
   }, e => {
@@ -369,6 +371,123 @@ function removeBook(id) {
   state.library = state.library.filter(b => b.id !== id);
   saveLibrary();
   render();
+}
+
+// ---------- Ratings ----------
+// Community ratings, not the user's own. Google Books supplies them at add time when it has
+// them; Open Library backfills the rest (see backfillRatings). Rendered three ways because the
+// space available differs wildly: 80px on a shelf caption, a full card in search, centred in
+// the detail view.
+
+function ratingOf(book) {
+  const r = Number(book.averageRating);
+  if (!Number.isFinite(r) || r <= 0) return null;
+  return { value: r, count: Number(book.ratingsCount) || 0, source: book.ratingSource || "google" };
+}
+
+function formatCount(n) {
+  if (!n) return "";
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1).replace(/\.0$/, "")}m`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  return String(n);
+}
+
+// Five glyphs, rounded to whole stars. A half-star glyph (\u00bd) is a different size and
+// baseline from \u2605 and reads as a typo next to it; the exact value is always printed
+// alongside, so rounding the glyphs costs no information.
+function starGlyphs(value) {
+  const filled = Math.max(0, Math.min(5, Math.round(value)));
+  return "\u2605".repeat(filled) + "\u2606".repeat(5 - filled);
+}
+
+// Shelf captions are 80px wide — one star and the number is all that fits legibly.
+function renderRatingCompact(book) {
+  const r = ratingOf(book);
+  if (!r) return `<span class="shelf-item-rating shelf-item-rating-empty"></span>`;
+  return `<span class="shelf-item-rating" title="${escAttr(`${r.value.toFixed(1)} out of 5`)}">\u2605 ${r.value.toFixed(1)}</span>`;
+}
+
+function renderRatingInline(book) {
+  const r = ratingOf(book);
+  if (!r) return "";
+  return `<div class="result-rating">${starGlyphs(r.value)}<span>${r.value.toFixed(1)}${
+    r.count ? ` (${formatCount(r.count)})` : ""}</span></div>`;
+}
+
+// ---------- Open Library rating backfill ----------
+// Google Books only has a rating for some volumes, and never gets one retroactively for books
+// already on a shelf. Open Library's search API exposes community ratings by ISBN, so unrated
+// books are topped up in the background, once each, and the answer is stored on the book — so
+// it costs one request per book ever, syncs to other devices, and works offline afterwards.
+
+const OPEN_LIBRARY_SEARCH = "https://openlibrary.org/search.json";
+const RATING_LOOKUP_GAP_MS = 500;   // be a polite client of a free community API
+const RATING_LOOKUP_PER_RUN = 40;   // a big library finishes over a few sessions, not one burst
+const RATING_SAVE_EVERY = 5;        // surface stars as they arrive rather than all at the end
+
+let ratingBackfillRunning = false;
+
+// Only an ISBN can be looked up this way; a Google volume id can't, so it's left alone.
+function isIsbnId(id) {
+  return /^(?:\d{9}[\dXx]|\d{13})$/.test(String(id || ""));
+}
+
+function needsRatingLookup(b) {
+  return b && !ratingOf(b) && !b.ratingChecked && isIsbnId(b.id);
+}
+
+async function fetchOpenLibraryRating(isbn) {
+  const url = `${OPEN_LIBRARY_SEARCH}?q=isbn:${encodeURIComponent(isbn)}` +
+    `&fields=ratings_average,ratings_count&limit=1`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const doc = data && Array.isArray(data.docs) ? data.docs[0] : null;
+  if (!doc) return { value: null, count: 0 };
+  // Liberal about the shape: read the documented fields but tolerate the nested variant.
+  const value = Number(doc.ratings_average ?? doc.ratings?.average);
+  const count = Number(doc.ratings_count ?? doc.ratings?.count) || 0;
+  return { value: Number.isFinite(value) && value > 0 ? value : null, count };
+}
+
+async function backfillRatings() {
+  if (ratingBackfillRunning) return;
+  if (navigator.onLine === false) return;
+  ratingBackfillRunning = true;
+
+  // Work from a snapshot of ids and re-resolve each book, since the library can change
+  // (a sync snapshot, an add, a remove) during the awaits.
+  const ids = state.library.filter(needsRatingLookup).map(b => b.id).slice(0, RATING_LOOKUP_PER_RUN);
+  let pending = 0;
+  const flush = () => { if (pending) { pending = 0; saveLibrary(); render(); } };
+
+  try {
+    for (const id of ids) {
+      const book = state.library.find(b => b.id === id);
+      if (!needsRatingLookup(book)) continue;
+      let r;
+      try {
+        r = await fetchOpenLibraryRating(id);
+      } catch (e) {
+        // Offline, CORS, rate limit, outage: leave the remaining books unmarked so a later
+        // session retries, and stop rather than hammering an API that is evidently unhappy.
+        console.warn("Rating backfill stopped:", e.message);
+        break;
+      }
+      // Mark it checked even when Open Library has no rating, so it isn't asked again.
+      book.ratingChecked = true;
+      if (r.value) {
+        book.averageRating = r.value;
+        book.ratingsCount = r.count;
+        book.ratingSource = "openlibrary";
+      }
+      if (++pending >= RATING_SAVE_EVERY) flush();
+      await new Promise(done => setTimeout(done, RATING_LOOKUP_GAP_MS));
+    }
+  } finally {
+    ratingBackfillRunning = false;
+    flush();
+  }
 }
 
 // ---------- Shelf ordering ----------
@@ -563,6 +682,7 @@ function renderResultCard(r) {
         <div style="flex:1;min-width:0;">
           <div class="result-title">${esc(r.title)}</div>
           <div class="result-author">${esc(r.authors || "Unknown author")}</div>
+          ${renderRatingInline(r)}
           ${desc}
         </div>
       </button>
@@ -587,6 +707,7 @@ function renderShelfItem(book) {
       <span class="shelf-cover-wrap">${cover}${badge}</span>
       <span class="shelf-item-title">${esc(book.title)}</span>
       <span class="shelf-item-author">${esc(book.authors || "Unknown author")}</span>
+      ${renderRatingCompact(book)}
     </button>`;
 }
 
@@ -690,9 +811,11 @@ function renderDetail() {
   if (book.categories) metaRows.push(book.categories);
   if (book.language) metaRows.push(book.language.toUpperCase());
 
-  const rating = book.averageRating ? `
-    <div class="detail-rating">${"★".repeat(Math.round(book.averageRating))}${"☆".repeat(5 - Math.round(book.averageRating))}
-      <span>${esc(String(book.averageRating))}${book.ratingsCount ? ` (${book.ratingsCount})` : ""}</span>
+  const r = ratingOf(book);
+  const rating = r ? `
+    <div class="detail-rating">${starGlyphs(r.value)}
+      <span>${esc(r.value.toFixed(1))}${r.count ? ` \u00b7 ${formatCount(r.count)} ratings` : ""}${
+        r.source === "openlibrary" ? " \u00b7 Open Library" : ""}</span>
     </div>` : "";
 
   const desc = book.description
@@ -1122,6 +1245,9 @@ window.addEventListener("resize", setAppHeight);
 window.addEventListener("orientationchange", setAppHeight);
 
 render();
+
+// Top up missing ratings in the background, after the first paint has settled.
+setTimeout(backfillRatings, 2000);
 
 // If this device was already linked to a sync code, silently reconcile with the cloud on boot
 // (safe to re-run every load — see enableSync's doc comment) rather than waiting for a save.

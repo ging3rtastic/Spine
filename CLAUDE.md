@@ -77,6 +77,9 @@ There is no build step, package manager, or test suite. To develop:
     order (`compareBooks()`), rather than insertion order. Series come from `detectSeries()` (parsed from
     the stored title/subtitle) or a manual `series`/`seriesNumber` set in the detail view. Sorting is
     applied to the derived copy, never to `state.library`. See `docs/architecture.md` → "Shelf ordering".
+  - Community ratings show on the shelf caption, search results and the detail view (`ratingOf()` /
+    `starGlyphs()`). `backfillRatings()` tops up books Google has no rating for from Open Library, once
+    per book, in the background. See `docs/architecture.md` → "Ratings".
   - Each book can carry an optional ownership mark (`owned`: own / library / buy), set from a "Where is
     it?" row in the detail view and shown as a small colored badge on the shelf cover — a shopping aid,
     independent of `status`. See `docs/architecture.md` → "Ownership marks".

@@ -2,6 +2,22 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-24
+
+- Community ratings now show on the shelf (`★ 4.5` under the caption) and on search result cards, not
+  just in the detail view. Shared helpers `ratingOf()`/`starGlyphs()`/`formatCount()` in `app.js`;
+  star glyphs round to whole stars with the exact value printed alongside.
+- The shelf caption grew a line, so `.shelf-item` height went 168px → 184px and the ledge gradient's
+  period 182px → 198px. **These must stay in step** (item height + 14px row-gap = period) or the wood
+  ledge drifts; verified by measuring actual row pitch in the browser.
+- Added `backfillRatings()`: books with no Google rating and an ISBN-shaped id are topped up from Open
+  Library in the background, one request per book ever (`ratingChecked`), 500ms apart, 40 per run,
+  stopping cleanly on any failure. New fields `ratingSource`, `ratingChecked`.
+- Verified in Playwright: ledge alignment measured, all three rating surfaces, and the backfill against
+  mocked Open Library responses (happy path / found-but-unrated / not-found / 503 / network failure).
+  **The live Open Library call is unverified** — the sandbox network policy denies `openlibrary.org`.
+  Bumped `APP_VERSION` to `14`.
+
 ## 2026-09-21
 
 - Reworked the ownership badges after feedback that they were hard to see. They were a dark chip with a
