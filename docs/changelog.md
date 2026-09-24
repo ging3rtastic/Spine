@@ -2,6 +2,18 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-24 (9)
+
+- The catalogue button copies **title + author**, comma separated, never the ISBN. Tested on the real
+  catalogue: the ISBN found nothing. An ISBN names one *edition* and a library stocks whichever
+  edition it bought, so an ISBN search misses books that are on the shelf.
+- Only the first author is used — a record listing one of two co-authors would otherwise miss.
+- The human-verification check fires on the catalogue's home page too, so it is blanket bot
+  protection on the OPAC, not something our link shape provoked. Nothing left to fix on our side;
+  recorded so it isn't re-investigated.
+- Verified in Playwright: single author, co-authored, and no-author books (no trailing comma), plus a
+  real clipboard round-trip. Bumped `APP_VERSION` to `22`.
+
 ## 2026-09-24 (8)
 
 - Deep-linking the catalogue search doesn't work and has been abandoned. Tapping

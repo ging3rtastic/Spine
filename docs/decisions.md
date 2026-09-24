@@ -41,6 +41,21 @@ a book tracker's referrer gives nothing away.
 
 One tap and a paste, that always works, beats one tap that mostly doesn't.
 
+The check turned out to fire on the home page as well, so it is blanket bot protection on the OPAC
+rather than a reaction to anything we were sending. There is nothing further to do about it, and
+trying would be the wrong kind of effort.
+
+**What gets copied is the title and author, not the ISBN.** This was the other real-device finding:
+the ISBN found nothing in the catalogue. An ISBN identifies one *edition*, and a library holds
+whichever edition it happened to buy — a different printing, a large-print run, a local reissue — so
+an ISBN search reliably misses books that are physically on the shelf. Title + author is fuzzier and
+therefore right: it matches the book rather than one manufactured object. Only the first author is
+included, since a catalogue record that lists one of two co-authors would otherwise come back empty.
+
+This is the opposite of the choice made for ratings, where the ISBN is preferred precisely *because*
+it is exact. Different question: Open Library is asked "what is this exact book rated", the catalogue
+is asked "do you have anything like this".
+
 Only City of Cape Town ships. A provincial/WCLS entry was left out deliberately rather than guessed
 at: its OPAC sits behind a login and its search URL shape could not be confirmed, and a link that
 404s is worse than no link. `LIBRARY_SYSTEMS` is a table so adding one later is a few lines.

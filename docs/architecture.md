@@ -435,10 +435,11 @@ instance — it is challenged every time and the query is dropped — so the lin
 point and the search term is copied to the clipboard instead. The reasoning, and why a server would make
 this worse, is in `docs/decisions.md`.
 
-`libraryQuery()` builds that copied term, preferring the ISBN: `book.id` *is* the ISBN-13 or ISBN-10
-whenever Google supplied one (see `lookupBooks()`), tested with the same `isIsbnId()` the rating backfill
-uses. Books that fell back to a Google volume id copy title + author instead, since a volume id means
-nothing to a library.
+`libraryQuery()` builds that copied term as `"<title>, <first author>"` — **not** the ISBN, even though
+one is usually to hand. An ISBN names one edition and a library stocks whichever edition it bought, so an
+ISBN search misses books that are on the shelf (confirmed against the live catalogue). Only the first
+author is used, so a record listing one of two co-authors still matches. Note this runs opposite to the
+rating backfill, which *prefers* the ISBN because it needs an exact edition — see `docs/decisions.md`.
 
 `renderLibraryLink()` emits an `<a>` with `rel="noopener"` — deliberately *not* `noreferrer` — carrying
 the term in `data-libcopy`. `attachEvents()` binds a click handler that fires

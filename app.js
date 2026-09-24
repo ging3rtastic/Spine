@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "21";
+const APP_VERSION = "22";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -327,10 +327,13 @@ function librarySystem() {
   return LIBRARY_SYSTEMS[state.librarySystem] || null;
 }
 
-// An ISBN is an exact hit. Books Google gave us no ISBN for keep its own volume id instead, which
-// means nothing to a library, so those fall back to a title+author search.
+// Title + author, never the ISBN. An ISBN names one *edition*, and a library holds whichever
+// edition it happened to buy — so an ISBN search comes back empty even when the book is on the
+// shelf. Confirmed against the real catalogue: the ISBN found nothing, the title and author did.
+// Only the first author, since a record listing just one of two co-authors would otherwise miss.
 function libraryQuery(book) {
-  return isIsbnId(book.id) ? book.id : [book.title, book.authors].filter(Boolean).join(" ");
+  const firstAuthor = String(book.authors || "").split(",")[0].trim();
+  return [book.title, firstAuthor].filter(Boolean).join(", ");
 }
 
 // `rel` is noopener but deliberately NOT noreferrer: a refererless request to a bot-protected
@@ -1108,8 +1111,7 @@ function renderDetail() {
   // question you ask before deciding whether to shelve or buy something.
   const libraryBtn = renderLibraryLink(book, "library-btn", "Find at %s");
   const libraryBlock = libraryBtn
-    ? `${libraryBtn}<span class="library-hint">Opens the catalogue and copies the ${
-        isIsbnId(book.id) ? "ISBN" : "title and author"} — paste it into the search box.</span>`
+    ? `${libraryBtn}<span class="library-hint">Opens the catalogue and copies the title and author — paste it into the search box.</span>`
     : "";
 
   const link = book.previewLink
@@ -1208,8 +1210,9 @@ function renderLibrarySection() {
             aria-pressed="${state.librarySystem === key}">${ICON.library} ${esc(meta.label)}</button>`).join("");
   return `
     <p class="settings-hint">
-      Puts a link on every book that opens your library's catalogue and copies the book's ISBN \u2014 or
-      its title and author, where there is no ISBN \u2014 ready to paste into the search box.
+      Puts a link on every book that opens your library's catalogue and copies its title and author,
+      ready to paste into the search box. Not the ISBN \u2014 libraries stock whichever edition they
+      bought, so an ISBN search misses books they actually have.
       ${sys ? `<br><span class="settings-subhint">Opens ${esc(sys.host)} in a new tab.</span>` : ""}
     </p>
     <div class="pill-row">${options}
