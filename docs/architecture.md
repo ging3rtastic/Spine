@@ -430,18 +430,27 @@ feature back on at the next load. `librarySystem()` resolves the key to an entry
 `"off"` or anything unrecognised; `renderLibraryLink()` returns `""` in that case, which is how the whole
 feature disappears without any call site needing to check.
 
-`libraryQuery()` prefers the ISBN: `book.id` *is* the ISBN-13 or ISBN-10 whenever Google supplied one (see
-`lookupBooks()`), tested with the same `isIsbnId()` the rating backfill uses. Books that fell back to a
-Google volume id search by title + author instead, since a volume id means nothing to a library.
+The entry carries `home`, not a search URL. Deep-linking a prefilled search does not work on this
+instance — it is challenged every time and the query is dropped — so the link opens the catalogue's entry
+point and the search term is copied to the clipboard instead. The reasoning, and why a server would make
+this worse, is in `docs/decisions.md`.
 
-Two surfaces, both mirroring where the Goodreads link already sits:
-- **Detail view** — a `.title-link` next to the title, before the Goodreads one.
-- **Search card** — a `.pill pill-icon` in the pill row (the card body is a `<button>`, so a nested `<a>`
-  would be invalid markup).
+`libraryQuery()` builds that copied term, preferring the ISBN: `book.id` *is* the ISBN-13 or ISBN-10
+whenever Google supplied one (see `lookupBooks()`), tested with the same `isIsbnId()` the rating backfill
+uses. Books that fell back to a Google volume id copy title + author instead, since a volume id means
+nothing to a library.
 
-Because two `.title-link`s can now sit side by side, the `::after` touch-target expansion is **44px tall
-but only as wide as the glyph plus its gap**. At the original 44px square the two hit areas overlapped by
-~10px and the later link in DOM order took taps meant for the first.
+`renderLibraryLink()` emits an `<a>` with `rel="noopener"` — deliberately *not* `noreferrer` — carrying
+the term in `data-libcopy`. `attachEvents()` binds a click handler that fires
+`navigator.clipboard.writeText()` and ignores the result: the link's own navigation must not wait on the
+clipboard, and a refused write must still leave you at the catalogue.
+
+Two surfaces:
+- **Detail view** — a full-width `.library-btn` after the status pills, labelled "Find at <library>", with
+  a `.library-hint` line saying whether the ISBN or the title+author was copied. Rendered for search
+  results as well as shelved books: "is it at the library?" is a question you ask *before* shelving.
+- **Search card** — a compact `.pill pill-icon` in the pill row (the card body is a `<button>`, so a
+  nested `<a>` would be invalid markup).
 
 ## Backup (Export / Import)
 

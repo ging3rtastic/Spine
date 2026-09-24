@@ -19,11 +19,27 @@ on its authenticated endpoints.
 Storing the credentials would be its own objection: the provincial service uses date of birth as the
 password, so that pair is worth more than the feature.
 
-What replaces it is a link out, the same move already made for Goodreads: the catalogue search,
-prefilled. The point that makes this more than a consolation prize is that on a phone the catalogue
-and Libby are *already signed in*, so the link lands on the real answer — holdings, availability,
-holds — without Spine ever handling a card number. What we give up is anything glanceable: no
-availability badge on the shelf, no hold status. That needs the auth we can't have.
+What replaces it is a link out, the same move already made for Goodreads. The point that makes this
+more than a consolation prize is that on a phone the catalogue and Libby are *already signed in*, so
+the link lands on the real answer — holdings, availability, holds — without Spine ever handling a
+card number. What we give up is anything glanceable: no availability badge on the shelf, no hold
+status. That needs the auth we can't have.
+
+**The link goes to the catalogue's front door, not to a prefilled search.** Deep-linking
+`/client/en_US/a/search/results?qu=<isbn>` was shipped first and tested on a real device: it
+triggered a "confirm you are human" check on *every* visit and then dropped the query, landing on the
+home page with no search run. The URL shape was right — those URLs are publicly indexed — but cold
+hits with no session, and (our own fault) no referrer either, read as scraping.
+
+Answering this with a server would make it worse, not better. A proxy request arrives from a
+datacenter IP with no browser fingerprint and no user gesture, which is a *stronger* bot signal than
+a phone tapping a link; we'd trade an interstitial for an outright block, and be building something
+whose purpose is to defeat a bot check. So the button does the ordinary thing — a plain visit to the
+entry point — and the search term rides on the clipboard for the user to paste. `noreferrer` was
+dropped from the link too (`noopener` stays): a refererless request is one more strike against us and
+a book tracker's referrer gives nothing away.
+
+One tap and a paste, that always works, beats one tap that mostly doesn't.
 
 Only City of Cape Town ships. A provincial/WCLS entry was left out deliberately rather than guessed
 at: its OPAC sits behind a login and its search URL shape could not be confirmed, and a link that

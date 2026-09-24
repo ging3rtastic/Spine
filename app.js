@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "20";
+const APP_VERSION = "21";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -309,13 +309,17 @@ function renderGoodreadsLink(book, cls) {
 // catalogues are server-rendered HTML with no CORS header, so the browser refuses to let a page
 // served from another origin read the response — logged in or not. Linking out is the honest
 // version, and it is also the better one on a phone, where the catalogue is already signed in.
-// See docs/decisions.md.
+//
+// We link to the catalogue's *entry point*, not to a prefilled search URL. Deep-linking
+// `/search/results?qu=...` was tried and does not work on this instance: with no session it
+// triggers a "confirm you are human" check on every visit and then lands on the home page with
+// the query silently dropped. A plain visit to the front door is ordinary navigation, so the
+// search term rides along on the clipboard instead. See docs/decisions.md.
 const LIBRARY_SYSTEMS = {
   cct: {
     label: "City of Cape Town",
     host: "opac.capetown.gov.za",
-    // SirsiDynix Enterprise: `qu` is the single free-text query box, and matches a bare ISBN.
-    search: q => `https://opac.capetown.gov.za/client/en_US/a/search/results?qu=${encodeURIComponent(q)}`,
+    home: "https://opac.capetown.gov.za/client/en_US/a",
   },
 };
 
@@ -329,12 +333,18 @@ function libraryQuery(book) {
   return isIsbnId(book.id) ? book.id : [book.title, book.authors].filter(Boolean).join(" ");
 }
 
-function renderLibraryLink(book, cls) {
+// `rel` is noopener but deliberately NOT noreferrer: a refererless request to a bot-protected
+// catalogue is one more reason for it to challenge us, and there is nothing sensitive in the
+// referrer of a static book tracker.
+function renderLibraryLink(book, cls, label) {
   const sys = librarySystem();
   if (!sys) return "";
-  return `<a class="${cls}" href="${escAttr(sys.search(libraryQuery(book)))}" target="_blank"
-    rel="noopener noreferrer" title="${escAttr(`Look for this at ${sys.label}`)}"
-    aria-label="${escAttr(`Look for ${book.title} at ${sys.label}`)}">${ICON.library}</a>`;
+  const text = label ? ` ${esc(label.replace("%s", sys.label))}` : "";
+  return `<a class="${cls}" href="${escAttr(sys.home)}" target="_blank" rel="noopener"
+    data-libcopy="${escAttr(libraryQuery(book))}"
+    title="${escAttr(`Find this at ${sys.label}`)}"
+    aria-label="${escAttr(`Find ${book.title} at ${sys.label} — copies the search term to paste`)}"
+    >${ICON.library}${text}</a>`;
 }
 
 function setLibrarySystem(key) {
@@ -1094,6 +1104,14 @@ function renderDetail() {
       </div>`
     : "";
 
+  // Shown for search results too, not just shelved books: "is it at the library?" is exactly the
+  // question you ask before deciding whether to shelve or buy something.
+  const libraryBtn = renderLibraryLink(book, "library-btn", "Find at %s");
+  const libraryBlock = libraryBtn
+    ? `${libraryBtn}<span class="library-hint">Opens the catalogue and copies the ${
+        isIsbnId(book.id) ? "ISBN" : "title and author"} — paste it into the search box.</span>`
+    : "";
+
   const link = book.previewLink
     ? `<a class="detail-link" href="${esc(book.previewLink)}" target="_blank" rel="noopener">View on Google Books</a>`
     : "";
@@ -1105,13 +1123,14 @@ function renderDetail() {
       </div>
       <div class="detail-body">
         ${cover}
-        <h2 class="detail-title">${esc(book.title)}${renderLibraryLink(book, "title-link")}${renderGoodreadsLink(book, "title-link")}</h2>
+        <h2 class="detail-title">${esc(book.title)}${renderGoodreadsLink(book, "title-link")}</h2>
         ${book.subtitle ? `<p class="detail-subtitle">${esc(book.subtitle)}</p>` : ""}
         <p class="detail-author">${esc(book.authors || "Unknown author")}</p>
         ${metaRows.length ? `<p class="detail-meta">${esc(metaRows.join(" · "))}</p>` : ""}
         ${rating}
         ${desc}
         <div class="pill-row">${actionPills}</div>
+        ${libraryBlock}
         ${ownRow}
         ${seriesBlock}
         ${link}
@@ -1189,8 +1208,8 @@ function renderLibrarySection() {
             aria-pressed="${state.librarySystem === key}">${ICON.library} ${esc(meta.label)}</button>`).join("");
   return `
     <p class="settings-hint">
-      Puts a link on every book that searches your library's catalogue for it \u2014 by ISBN where there
-      is one, otherwise by title and author.
+      Puts a link on every book that opens your library's catalogue and copies the book's ISBN \u2014 or
+      its title and author, where there is no ISBN \u2014 ready to paste into the search box.
       ${sys ? `<br><span class="settings-subhint">Opens ${esc(sys.host)} in a new tab.</span>` : ""}
     </p>
     <div class="pill-row">${options}
@@ -1375,6 +1394,14 @@ function attachEvents() {
 
   const versionTag = document.querySelector(".version-tag");
   if (versionTag) versionTag.addEventListener("click", forceRefresh);
+
+  document.querySelectorAll("[data-libcopy]").forEach(el => {
+    // Fire-and-forget on purpose: the link's own navigation must not wait on the clipboard, and a
+    // refused write (no permission, older Safari) must still leave you at the catalogue.
+    el.addEventListener("click", () => {
+      navigator.clipboard?.writeText(el.dataset.libcopy).catch(() => {});
+    });
+  });
 
   document.querySelectorAll("[data-libsys]").forEach(el => {
     el.addEventListener("click", () => setLibrarySystem(el.dataset.libsys));

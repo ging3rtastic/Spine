@@ -2,6 +2,25 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-24 (8)
+
+- Deep-linking the catalogue search doesn't work and has been abandoned. Tapping
+  `/search/results?qu=...` cold triggered a "confirm you are human" check **every** time and then
+  landed on the OPAC home page with the query silently dropped — confirmed on a real device.
+- The link now opens the catalogue's entry point (`/client/en_US/a`) and copies the book's ISBN — or
+  title + author where there's no ISBN — to the clipboard to paste into the search box. An ordinary
+  visit to the front door is ordinary navigation, which is the point.
+- Dropped `noreferrer` from the link (kept `noopener`): a refererless request to a bot-protected
+  catalogue is one more reason to be challenged, and a book tracker's referrer discloses nothing.
+- Promoted it from a 15px glyph by the title to a real full-width button after the status pills,
+  labelled "Find at City of Cape Town", with a line underneath saying what gets copied. It now shows
+  for search results too, since "is it at the library?" is a question you ask *before* shelving.
+- Reverted the `.title-link::after` narrowing from (7): only the Goodreads glyph sits by the title
+  again, so the 44px square touch target is back.
+- Verified in Playwright: button label/href/rel, the ISBN and the no-ISBN fallback (each with its own
+  hint wording), and that a tap really does put the search term on the clipboard. Bumped
+  `APP_VERSION` to `21`.
+
 ## 2026-09-24 (7)
 
 - Added "My library": with a library system chosen in Settings, every book gets a small library-building

@@ -85,10 +85,11 @@ There is no build step, package manager, or test suite. To develop:
     ratings, `renderGoodreadsLink()` also puts a small outward-arrow link by the title (and in the
     search card's pill row) that opens a Google search for the book. See `docs/architecture.md` →
     "Ratings".
-  - Settings → "My library" picks a library system (`LIBRARY_SYSTEMS`); each book then gets a link
-    (`renderLibraryLink()`) that opens that library's catalogue searched for it, by ISBN where there is
-    one. Link-out only — Spine can't query a catalogue (no CORS), and deliberately never handles a
-    library card. See `docs/architecture.md` → "Library catalogue links".
+  - Settings → "My library" picks a library system (`LIBRARY_SYSTEMS`); each book then gets a button
+    (`renderLibraryLink()`) that opens that library's catalogue and copies the book's ISBN to paste.
+    Link-out only — Spine can't query a catalogue (no CORS) and deliberately never handles a library
+    card; prefilled search URLs were tried and are refused by the catalogue's bot check. See
+    `docs/architecture.md` → "Library catalogue links".
   - Each book can carry an optional ownership mark (`owned`: own / library / buy), set from a "Where is
     it?" row in the detail view and shown as a small colored badge on the shelf cover — a shopping aid,
     independent of `status`. See `docs/architecture.md` → "Ownership marks".
