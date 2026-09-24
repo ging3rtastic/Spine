@@ -2,6 +2,24 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-24 (5)
+
+- Rating coverage: when the ISBN lookup finds no rating, `fetchOpenLibraryRating()` now retries by
+  title + author surname. Open Library attaches ratings to a *work* while an ISBN names one
+  *edition*, and its edition records often carry no ISBN — so plenty of rated books were being missed
+  entirely. At most two requests per book.
+- A title/author hit must pass `docMatchesBook()`: exact title match after normalisation (subtitle,
+  punctuation and leading articles stripped) **and** the author surname present. Started with a
+  substring title test and tightened it after a test caught "Foundation" matching "Foundation and
+  Empire" by the same author — a wrong rating is worse than none.
+- Refactored `splitAuthorName()` out of `authorSortKey()` so the shelf sort and the rating matcher
+  share one definition of a surname (particles, honorifics).
+- Goodreads was considered and is not available: Amazon stopped issuing API keys in Dec 2020 and
+  retired existing ones. Noted in decisions.md so it isn't re-investigated.
+- Verified in Playwright: 8 matcher cases including three false-positive classes, the two-step chain,
+  ISBN-hit short-circuit (no wasted second request), plus the full existing suite. Bumped
+  `APP_VERSION` to `18`.
+
 ## 2026-09-24 (4)
 
 - Search results (and therefore barcode scans, which hand off to `runSearch`) now get the Open Library

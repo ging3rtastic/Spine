@@ -2,6 +2,24 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Goodreads is not an option; Open Library matching was improved instead
+
+Goodreads is the obvious place to want ratings from, and it is closed. Amazon stopped issuing new API
+keys in December 2020 and retired the existing ones; there is no application process and scraping
+breaches their terms. Any guide suggesting otherwise predates 2020. Hardcover is the plausible modern
+alternative (free GraphQL API, Goodreads-scale data) but needs an account and a key embedded in
+client JS, so it was left as a possible later step.
+
+What was done instead is cheaper and needs no third party: fix the matching. Open Library attaches
+ratings to a *work*, an ISBN identifies one *edition*, and its edition records frequently carry no
+ISBN — so an ISBN-only lookup misses rated books that are sitting right there. Falling back to
+title + author recovers those.
+
+The matcher requires an exact title match after normalisation, not a substring. The substring version
+was written first and a test caught it accepting "Foundation" for "Foundation and Empire" — same
+author, different book, plausible-looking rating. Coverage is the goal, but not at the price of
+confidently showing the wrong number.
+
 ## Ratings are backfilled once per book, and failures are not recorded
 
 Open Library is a free community service, so the backfill is deliberately stingy: one request per book

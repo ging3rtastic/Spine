@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "17";
+const APP_VERSION = "18";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -468,9 +468,9 @@ function needsRatingLookup(b) {
   return b && !ratingOf(b) && !b.ratingChecked && isIsbnId(b.id);
 }
 
-async function fetchOpenLibraryRating(isbn) {
-  const url = `${OPEN_LIBRARY_SEARCH}?q=isbn:${encodeURIComponent(isbn)}` +
-    `&fields=ratings_average,ratings_count&limit=1`;
+async function olSearch(query) {
+  const url = `${OPEN_LIBRARY_SEARCH}?${query}` +
+    `&fields=title,author_name,ratings_average,ratings_count&limit=5`;
   // Without a timeout a hung request stalls the whole batch behind it.
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), RATING_TIMEOUT_MS);
@@ -484,12 +484,63 @@ async function fetchOpenLibraryRating(isbn) {
   }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
-  const doc = data && Array.isArray(data.docs) ? data.docs[0] : null;
-  if (!doc) return { value: null, count: 0 };
-  // Liberal about the shape: read the documented fields but tolerate the nested variant.
+  return data && Array.isArray(data.docs) ? data.docs : [];
+}
+
+// Liberal about the shape: read the documented fields but tolerate the nested variant.
+function parseRatingDoc(doc) {
+  if (!doc) return null;
   const value = Number(doc.ratings_average ?? doc.ratings?.average);
   const count = Number(doc.ratings_count ?? doc.ratings?.count) || 0;
   return { value: Number.isFinite(value) && value > 0 ? value : null, count };
+}
+
+// Sources disagree on subtitle, punctuation and articles, so compare a reduced form. The
+// split covers the usual subtitle separators — colon, comma ("The Hobbit, or There and
+// Back Again"), bracket and dashes — leaving just the main title.
+function normalizeTitle(t) {
+  return String(t || "")
+    .toLowerCase()
+    .split(/[:,;(\u2013\u2014]/)[0]
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\b(the|a|an)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// A title-only match happily returns a different book of the same name, so a hit that did not
+// come from an ISBN has to agree on the author too.
+function docMatchesBook(doc, book) {
+  const want = normalizeTitle(book.title);
+  const got = normalizeTitle(doc.title);
+  if (!want || !got) return false;
+  // Exact match only, post-normalisation. A substring rule looks tempting but quietly accepts
+  // a series sibling by the same author ("Foundation" vs "Foundation and Empire"), and a
+  // confidently wrong rating is worse than none — same principle as series detection.
+  if (want !== got) return false;
+  const surname = surnameOf(book.authors);
+  if (!surname) return false;
+  return (doc.author_name || []).join(" ").toLowerCase().includes(surname);
+}
+
+async function fetchOpenLibraryRating(book) {
+  // 1. By ISBN — precise, when the edition happens to be indexed with one.
+  const isbnHit = parseRatingDoc((await olSearch(`q=isbn:${encodeURIComponent(book.id)}`))[0]);
+  if (isbnHit && isbnHit.value) return isbnHit;
+
+  // 2. Ratings attach to a *work*, but an ISBN identifies one *edition*, and Open Library's
+  //    edition records frequently carry no ISBN — so a miss above doesn't mean the book is
+  //    absent. Duplicate work records mean an unrated hit doesn't mean nobody rated it either.
+  //    Retry by title + author surname, accepting a doc only when both line up.
+  const title = String(book.title || "").trim();
+  const surname = surnameOf(book.authors);
+  if (title && surname) {
+    const docs = await olSearch(
+      `title=${encodeURIComponent(title)}&author=${encodeURIComponent(surname)}`);
+    const hit = parseRatingDoc(docs.find(d => docMatchesBook(d, book) && Number(d.ratings_average) > 0));
+    if (hit && hit.value) return hit;
+  }
+  return { value: null, count: 0 };
 }
 
 // Google has dropped ratings for most volumes, so a search result usually arrives with none —
@@ -532,7 +583,7 @@ async function enrichResultsWithRatings(seq) {
     if (seq !== searchSeq) return;   // a newer search has replaced these results
     const batch = remaining.slice(i, i + RESULT_RATING_CONCURRENCY);
     const hits = await Promise.all(batch.map(r =>
-      fetchOpenLibraryRating(r.id).catch(() => undefined)));  // undefined = transient, don't cache
+      fetchOpenLibraryRating(r).catch(() => undefined)));  // undefined = transient, don't cache
     let any = false;
     batch.forEach((r, j) => {
       if (hits[j] === undefined) return;
@@ -568,7 +619,7 @@ async function backfillRatings(opts = {}) {
       if (!needsRatingLookup(book)) continue;
       let r;
       try {
-        r = await fetchOpenLibraryRating(id);
+        r = await fetchOpenLibraryRating(book);
       } catch (e) {
         // Offline, CORS, rate limit, outage: leave the remaining books unmarked so a later
         // session retries, and stop rather than hammering an API that is evidently unhappy.
@@ -622,17 +673,34 @@ function toNumber(tok) {
 }
 
 // Sorts on the surname, falling back to the whole string for mononyms. Unknown authors sort last.
-function authorSortKey(authors) {
+// Splits the primary author into surname + rest, handling honorifics and surname particles.
+// Shared by the shelf sort and by the Open Library title/author matcher.
+function splitAuthorName(authors) {
   const primary = String(authors || "").split(",")[0].trim();
-  if (!primary) return "￿";
+  if (!primary) return null;
   const parts = primary.split(/\s+/).filter(Boolean);
   while (parts.length > 1 && NAME_SUFFIXES.has(parts[parts.length - 1].toLowerCase().replace(/[.,]/g, ""))) {
     parts.pop();
   }
-  if (parts.length === 1) return parts[0].toLowerCase();
+  if (parts.length === 1) return { surname: parts[0].toLowerCase(), rest: "" };
   let i = parts.length - 1;
   while (i > 0 && NAME_PARTICLES.has(parts[i - 1].toLowerCase().replace(/\.$/, ""))) i--;
-  return `${parts.slice(i).join(" ")} ${parts.slice(0, i).join(" ")}`.trim().toLowerCase();
+  return {
+    surname: parts.slice(i).join(" ").toLowerCase(),
+    rest: parts.slice(0, i).join(" ").toLowerCase(),
+  };
+}
+
+function surnameOf(authors) {
+  const n = splitAuthorName(authors);
+  return n ? n.surname : "";
+}
+
+// Sorts on the surname, falling back to the whole string for mononyms. Unknown authors sort last.
+function authorSortKey(authors) {
+  const n = splitAuthorName(authors);
+  if (!n) return "￿";
+  return `${n.surname} ${n.rest}`.trim();
 }
 
 // Library-style: a leading article doesn't count for alphabetisation.

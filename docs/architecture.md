@@ -231,7 +231,23 @@ Google Books only carries a rating for some volumes, and a book already on a she
 `backfillRatings()` tops up the rest from Open Library's search API, which exposes community ratings
 by ISBN:
 
-    GET https://openlibrary.org/search.json?q=isbn:<isbn>&fields=ratings_average,ratings_count&limit=1
+`fetchOpenLibraryRating(book)` tries two queries, in order:
+
+    1. GET /search.json?q=isbn:<isbn>          — precise, when the edition is indexed with an ISBN
+    2. GET /search.json?title=<t>&author=<surname>  — only if (1) yielded no rating
+
+Step 2 exists because **ratings attach to a work, while an ISBN identifies one edition**, and Open
+Library's edition records frequently carry no ISBN at all. A miss in (1) therefore doesn't mean the
+book is absent, and duplicate work records mean an unrated hit in (1) doesn't mean nobody rated it —
+so (2) runs in both cases. Cost is at most two requests per book.
+
+A step-2 hit is accepted only if `docMatchesBook()` agrees on **both** title and author:
+`normalizeTitle()` lowercases, drops everything after the first subtitle separator (`: , ; ( – —`),
+strips punctuation and leading articles, and the comparison is **exact** — deliberately not a
+substring test, which quietly accepts a series sibling by the same author ("Foundation" vs
+"Foundation and Empire"). The author check requires the book's surname (via `splitAuthorName()`,
+shared with the shelf sort) to appear in the doc's `author_name`. A confidently wrong rating is
+worse than none — the same principle the series detection follows.
 
 Rules that keep it cheap and polite:
 
