@@ -2,6 +2,17 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-24 (6)
+
+- Added an outward-arrow link next to the book title (detail view) and in the search result pill row
+  that opens a Google search for `<title> <author> goodreads` in a new tab — the pragmatic answer to
+  thin rating data, since the real Goodreads page is one tap away.
+- On the search card it sits in the pill row rather than by the title: the card body is a `<button>`,
+  so a nested `<a>` would be invalid markup.
+- Visual glyph is 27px; `.title-link::after` widens the touch target to 44px without affecting
+  layout. Verified both the rendered size and the touch target, plus new-tab behaviour and attribute
+  escaping with a title containing quotes and angle brackets. Bumped `APP_VERSION` to `19`.
+
 ## 2026-09-24 (5)
 
 - Rating coverage: when the ISBN lookup finds no rating, `fetchOpenLibraryRating()` now retries by

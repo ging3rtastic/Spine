@@ -19,6 +19,9 @@ _(none open right now)_
 - Open Library backfill: requests confirmed reaching the live API from a device. Still to confirm that
   values are *extracted* — read the "N from Open Library" count in Settings → Ratings. Zero there,
   alongside checked-but-unrated books, means the response field names differ from what the app reads.
+- Minimum-vote threshold for ratings (hide anything backed by fewer than ~5 votes). Proposed when
+  low-count ratings were flagged as misleading; the Goodreads link was built instead. Revisit if the
+  remaining stars still feel untrustworthy.
 - Hardcover (hardcover.app) as a third rating source if Open Library coverage still feels thin —
   free GraphQL API, but needs an account and an API key embedded client-side.
 - Your own 1–5 star rating, separate from the community one (would want its own field, not

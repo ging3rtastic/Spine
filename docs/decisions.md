@@ -2,6 +2,22 @@
 
 Short entries on *why*, for choices that weren't obvious. Newest first.
 
+## Link out to Goodreads rather than keep chasing rating data
+
+After improving Open Library matching, coverage was still poor and the ratings that did arrive were
+often backed by one or two votes — accurate-looking and meaningless. Checked whether a better source
+exists: it doesn't. Goodreads' API closed in 2020, StoryGraph has none, and Hardcover (the only real
+alternative, free GraphQL, 5k requests/day) needs a personal bearer token that a static client-only
+app can only ship in plain sight, with CORS unverified.
+
+So the feature stops trying to be authoritative. A small outward-arrow link next to the title opens a
+Google search for the book plus "goodreads", putting the real page — with its thousands of ratings —
+one tap away. This is strictly more useful than any number Spine could show, costs no API, no key and
+no quota, and can't go stale or be wrong.
+
+The stars stay for the books that do have a credible rating; the link covers everything else. If
+low-vote ratings still grate, the next step is a minimum-vote threshold, not another data source.
+
 ## Goodreads is not an option; Open Library matching was improved instead
 
 Goodreads is the obvious place to want ratings from, and it is closed. Amazon stopped issuing new API

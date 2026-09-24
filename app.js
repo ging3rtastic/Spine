@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "18";
+const APP_VERSION = "19";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -16,6 +16,7 @@ const ICON = {
   gear: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   home: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>`,
   library: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10 12 3l10 7"/><path d="M5 10v11M10 10v11M14 10v11M19 10v11"/><path d="M3 21h18"/></svg>`,
+  external: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>`,
   cart: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.2"/><circle cx="18" cy="20" r="1.2"/><path d="M1.5 3H4l2.5 11.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.5L21 7H5.2"/></svg>`,
 };
 
@@ -287,6 +288,19 @@ async function lookupBooks(query) {
       previewLink: v.previewLink || null,
     };
   });
+}
+
+// No free API carries Goodreads-scale ratings (see docs/decisions.md), so instead of guessing
+// at a number, link out to a Google search that surfaces the book's Goodreads page.
+function goodreadsSearchUrl(book) {
+  const q = [book.title, book.authors, "goodreads"].filter(Boolean).join(" ");
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+}
+
+function renderGoodreadsLink(book, cls) {
+  return `<a class="${cls}" href="${escAttr(goodreadsSearchUrl(book))}" target="_blank"
+    rel="noopener noreferrer" title="Look up reviews on Google"
+    aria-label="${escAttr(`Look up reviews for ${book.title} on Google`)}">${ICON.external}</a>`;
 }
 
 function esc(s) {
@@ -861,7 +875,7 @@ function renderResultCard(r) {
           ${desc}
         </div>
       </button>
-      <div class="pill-row">${pills}</div>
+      <div class="pill-row">${pills}${renderGoodreadsLink(r, "pill pill-icon")}</div>
     </div>`;
 }
 
@@ -1051,7 +1065,7 @@ function renderDetail() {
       </div>
       <div class="detail-body">
         ${cover}
-        <h2 class="detail-title">${esc(book.title)}</h2>
+        <h2 class="detail-title">${esc(book.title)}${renderGoodreadsLink(book, "title-link")}</h2>
         ${book.subtitle ? `<p class="detail-subtitle">${esc(book.subtitle)}</p>` : ""}
         <p class="detail-author">${esc(book.authors || "Unknown author")}</p>
         ${metaRows.length ? `<p class="detail-meta">${esc(metaRows.join(" · "))}</p>` : ""}

@@ -81,7 +81,10 @@ There is no build step, package manager, or test suite. To develop:
     `starGlyphs()`). `backfillRatings()` tops up books Google has no rating for from Open Library, once
     per book, in the background, and `enrichResultsWithRatings()` does the same for search results and
     barcode scans as they come back. Settings → "Ratings" reports what the backfill is doing and why
-    it failed, since it is otherwise invisible on a phone. See `docs/architecture.md` → "Ratings".
+    it failed, since it is otherwise invisible on a phone. Because no free API carries Goodreads-scale
+    ratings, `renderGoodreadsLink()` also puts a small outward-arrow link by the title (and in the
+    search card's pill row) that opens a Google search for the book. See `docs/architecture.md` →
+    "Ratings".
   - Each book can carry an optional ownership mark (`owned`: own / library / buy), set from a "Where is
     it?" row in the detail view and shown as a small colored badge on the shelf cover — a shopping aid,
     independent of `status`. See `docs/architecture.md` → "Ownership marks".

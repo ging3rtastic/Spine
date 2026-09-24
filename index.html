@@ -245,6 +245,23 @@
   .detail-rating span { color: var(--text-muted); font-size: 12px; margin-left: 4px; }
   .detail-desc { font-size: 13.5px; color: var(--text); opacity: 0.9; line-height: 1.6; margin: 0 0 18px; white-space: pre-wrap; }
   .detail-desc-empty { opacity: 0.5; font-style: italic; }
+  /* Sits inline after the title text so it wraps with it rather than floating off. */
+  .title-link {
+    position: relative;
+    display: inline-flex; align-items: center; justify-content: center;
+    vertical-align: middle; margin-left: 7px; padding: 5px;
+    color: var(--text-muted); text-decoration: none; border-radius: 6px;
+    background: var(--surface-alt); border: 1px solid var(--border);
+  }
+  /* The glyph stays small next to the title, but a 27px box is a poor thumb target.
+     This expands the touch area to ~44px without affecting layout. */
+  .title-link::after {
+    content: ""; position: absolute; top: 50%; left: 50%;
+    width: 44px; height: 44px; transform: translate(-50%, -50%);
+  }
+  .title-link:active { color: var(--gold); }
+  .pill-icon { display: inline-flex; align-items: center; padding: 7px 10px; text-decoration: none; }
+
   .detail-link { display: block; text-align: center; font-size: 12.5px; color: var(--gold); margin-top: 14px; text-decoration: none; }
 
   .settings-body { flex: 1; overflow-y: auto; padding: 0 20px 24px; }

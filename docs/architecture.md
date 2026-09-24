@@ -285,6 +285,20 @@ again. A failed lookup is *not* cached — it may be transient.
 `fetchOpenLibraryRating()` aborts after `RATING_TIMEOUT_MS` (8s); without it a hung request stalls
 the whole batch behind it.
 
+### Escape hatch: look it up yourself
+
+No free API carries Goodreads-scale ratings, so `renderGoodreadsLink()` puts an outward-arrow link
+next to the book that opens a Google search for `<title> <author> goodreads` in a new tab. It appears
+in two places:
+
+- **detail view** — inline at the end of `.detail-title`, so it wraps with the title,
+- **search result card** — in the `.pill-row`, *not* beside the title, because the card body is
+  itself a `<button>` and a nested `<a>` is invalid markup.
+
+The glyph is 27px to sit politely beside the title, but `.title-link::after` stretches the touch
+target to 44px without affecting layout. Links carry `rel="noopener noreferrer"`, and the query is
+built with `encodeURIComponent` so odd characters in a title can't break out of the attribute.
+
 ### Diagnosing it
 
 A background job that fails silently is undiagnosable on a phone, so Settings → **Ratings** shows
