@@ -16,8 +16,9 @@ _(none open right now)_
   whether a small built-in series lookup table for common series would pay for itself.
 - Filter/highlight a shelf by ownership mark (e.g. a "show only what I need to buy" toggle on To Read).
   The badges + header count cover the glanceable case; a filter would matter once To Read is long.
-- Confirm the Open Library backfill works against the live API (it could only be tested against mocks —
-  `openlibrary.org` is blocked from the dev sandbox). Check a book with no Google rating picks one up.
+- Open Library backfill: requests confirmed reaching the live API from a device. Still to confirm that
+  values are *extracted* — read the "N from Open Library" count in Settings → Ratings. Zero there,
+  alongside checked-but-unrated books, means the response field names differ from what the app reads.
 - Your own 1–5 star rating, separate from the community one (would want its own field, not
   `averageRating`, plus a slot in Reading Stats).
 - Reading progress tracker (current page/% for "Reading" books) — proposed alongside Reading Stats but not

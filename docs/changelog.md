@@ -2,6 +2,14 @@
 
 Dated, one-line-per-change log of what actually shipped. Newest first.
 
+## 2026-09-24 (3)
+
+- Settings → Ratings now splits rated books by provenance ("N from Open Library"), shown even at zero.
+  Live use confirmed requests reach Open Library (a clean run with nothing pending proves it, given
+  failures leave books unmarked), but that could not distinguish "Open Library has no rating for these
+  books" from "the response is parsed wrong and never yields a value" — both leave a book checked and
+  unrated. The provenance count separates them. Bumped `APP_VERSION` to `16`.
+
 ## 2026-09-24 (2)
 
 - Added Settings → **Ratings**: how many books have a rating, how many can't be looked up (no ISBN),

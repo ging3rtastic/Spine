@@ -1,5 +1,5 @@
 // Bump alongside sw.js's CACHE_NAME so the on-screen tag confirms an update landed.
-const APP_VERSION = "15";
+const APP_VERSION = "16";
 
 // ---------- Icons (inline SVG, stroke style to match lucide look) ----------
 const ICON = {
@@ -434,11 +434,17 @@ const ratingStatus = { running: false, lastError: null, lastOk: null, found: 0, 
 
 function ratingCounts() {
   const lib = state.library;
+  const rated = lib.filter(b => ratingOf(b));
   return {
     total: lib.length,
-    rated: lib.filter(b => ratingOf(b)).length,
+    rated: rated.length,
     pending: lib.filter(needsRatingLookup).length,
     unsupported: lib.filter(b => !ratingOf(b) && !isIsbnId(b.id)).length,
+    // Split by provenance. This is the only way to tell "Open Library genuinely has no rating
+    // for these books" apart from "the response is being parsed wrong and never yields one" —
+    // both leave a book checked-but-unrated, but only the first still produces hits elsewhere.
+    fromOpenLibrary: rated.filter(b => b.ratingSource === "openlibrary").length,
+    checkedNoRating: lib.filter(b => !ratingOf(b) && b.ratingChecked).length,
   };
 }
 
@@ -963,10 +969,18 @@ function renderRatingsSection() {
     line = `Nothing left to check.`;
   }
 
+  const breakdown = [
+    // Shown even at zero once anything has been checked: "0 from Open Library" alongside a
+    // pile of checked books is the signature of a parsing problem, and silence would hide it.
+    (c.fromOpenLibrary || c.checkedNoRating) ? `${c.fromOpenLibrary} from Open Library` : "",
+    c.checkedNoRating ? `${c.checkedNoRating} checked, no rating found` : "",
+    c.unsupported ? `${c.unsupported} can't be looked up (no ISBN)` : "",
+  ].filter(Boolean).join(" \u00b7 ");
+
   return `
     <p class="settings-hint">
       ${c.rated} of ${c.total} book${c.total === 1 ? "" : "s"} have a rating.
-      ${c.unsupported ? `${c.unsupported} can't be looked up (no ISBN).` : ""}
+      ${breakdown ? `<br><span class="settings-subhint">${breakdown}.</span>` : ""}
     </p>
     <p class="settings-hint ${ratingStatus.lastError ? "settings-hint-error" : ""}">${line}</p>
     <button class="secondary-btn" id="ratings-check-btn" ${ratingStatus.running ? "disabled" : ""}>

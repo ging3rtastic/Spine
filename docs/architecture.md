@@ -254,6 +254,12 @@ ISBN), and the last run's outcome — held in the `ratingStatus` module object a
 `renderRatingsSection()`. A **Check for ratings now** button runs `backfillRatings({ manual: true })`
 on demand instead of waiting for the boot timer.
 
+The counts line splits rated books by provenance (`fromOpenLibrary`) and shows the Open Library
+figure **even when it is zero**, because "0 from Open Library" next to a pile of checked-but-unrated
+books is the signature of a parsing problem — the request succeeds, the JSON parses, but no value is
+extracted, leaving every book marked checked with nothing to show. Omitting the zero would hide
+exactly the failure the panel exists to catch.
+
 The error text is the diagnosis, and the distinction matters:
 
 | shown | means |
@@ -264,11 +270,12 @@ The error text is the diagnosis, and the distinction matters:
 | `Last check failed: Device is offline` | `navigator.onLine` is false |
 | `N books still to check` | not run yet this session |
 
-**Unverified from the dev container:** `openlibrary.org` is denied by the sandbox network policy, so
-the response shape above is coded from the documented API and exercised against mocked responses
-(happy path, 503, network failure), not against the live service. If the live shape differs the
-backfill simply finds nothing and logs a warning — it cannot corrupt stored data. Worth confirming
-on a real device.
+**Verification status.** `openlibrary.org` is denied by the sandbox network policy, so the request
+was only ever exercised against mocks here. It has since been confirmed *reaching* the live service
+from a real device: a run completed with no error and left no books pending, which by the failure
+design (a failed request stops the run and leaves books unmarked) proves every book received a
+parseable response. Whether values are being *extracted* correctly is read off the "N from Open
+Library" count — see above.
 
 ## Shelf ordering
 
